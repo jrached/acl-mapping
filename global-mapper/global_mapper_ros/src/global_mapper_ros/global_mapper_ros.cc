@@ -595,8 +595,16 @@ void GlobalMapperRos::DepthImageCallback(const sensor_msgs::Image::ConstPtr& ima
 
       if (finite)
       {
+        if(depth>4.5){
+        point.z = clear_unknown_distance_;
+        point.intensity = 1.0/0.0;
+	} 
+	else{
         point.z = depth;
         point.intensity = 0;
+	}
+        
+       
       }
       else
       {
