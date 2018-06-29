@@ -1,9 +1,13 @@
 <launch>
+
+  <!-- name of the quad -->
+  <arg name="quad" default="SQ01s"/>
+
   <arg name="load_params" default="true" />
   <arg name="param_file" default="global_mapper.yaml" />
 
   <!-- input topics -->
-  <arg name="depth_image_topic" default="/depthmap_filter/depth_filt" />
+  <arg name="depth_image_topic" default="/depthmap_filter/depth_filt" />  
   <arg name="pose_topic" default="/pose" />
   <arg name="goal_topic" default="/move_base_simple/goal" />
 
@@ -16,7 +20,7 @@
   <arg name="sparse_path_topic" default="~sparse_path" />
 
   <!-- node -->
-  <node pkg="global_mapper_ros" type="global_mapper_node" name="global_mapper_ros" output="screen">
+  <node ns="$(arg quad)" pkg="global_mapper_ros" type="global_mapper_node" name="global_mapper_ros" output="screen">
       <!-- params -->
       <rosparam command="load" if="$(arg load_params)" file="$(find global_mapper_ros)/cfg/$(arg param_file)"/>
 

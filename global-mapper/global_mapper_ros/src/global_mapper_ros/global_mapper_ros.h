@@ -17,17 +17,20 @@
 #include <image_transport/image_transport.h>
 #include <sensor_msgs/Image.h>
 
+#include "acl_msgs/ViconState.h"
+
 #include "global_mapper/global_mapper.h"
 #include "global_mapper_ros/PlanningGrids.h"
 
-namespace global_mapper_ros {
-
-class GlobalMapperRos {
- public:
+namespace global_mapper_ros
+{
+class GlobalMapperRos
+{
+public:
   GlobalMapperRos();
   void Run();
 
- private:
+private:
   void GetParams();
   void InitSubscribers();
   void InitPublishers();
@@ -37,29 +40,32 @@ class GlobalMapperRos {
                                       sensor_msgs::PointCloud2* pointcloud);
   void PopulateDistancePointCloudMsg(const voxel_grid::VoxelGrid<int>& distance_grid,
                                      sensor_msgs::PointCloud2* pointcloud);
-  void PopulateCostPointCloudMsg(const voxel_grid::VoxelGrid<int>& cost_grid,
-                                 sensor_msgs::PointCloud2* pointcloud);
+  void PopulateCostPointCloudMsg(const voxel_grid::VoxelGrid<int>& cost_grid, sensor_msgs::PointCloud2* pointcloud);
   void PopulatePathMsg(const std::vector<std::array<double, 3>>& path, nav_msgs::Path* path_msg);
   void Publish(const ros::TimerEvent& event);
- 
+
   void PublishPlanningGrids(const voxel_grid::VoxelGrid<float>& occupancy_grid,
                             const voxel_grid::VoxelGrid<int>& distance_grid,
                             const voxel_grid::VoxelGrid<int>& cost_grid);
 
   // callbacks
   void DepthImageCallback(const sensor_msgs::Image::ConstPtr& image,
-                     const sensor_msgs::CameraInfo::ConstPtr& camera_info);
-  void PoseCallback(const geometry_msgs::PoseStamped::ConstPtr& pose_ptr);
+                          const sensor_msgs::CameraInfo::ConstPtr& camera_info);
+  void PoseCallback(const acl_msgs::ViconState::ConstPtr& pose_ptr);
   void GoalCallback(const geometry_msgs::PoseStamped::ConstPtr& goal_ptr);
 
   // health and status
-  enum ProcessArgs {
+  enum ProcessArgs
+  {
     NOMINAL = 0,
     NO_POSE = 1,
     NO_GOAL = 2,
     NO_DEPTH_IMAGE = 3
   };
-  
+
+  // name of the drone
+  std::string name_drone;
+
   // publishers
   ros::Publisher occ_grid_pub_;
   ros::Publisher unknown_grid_pub_;

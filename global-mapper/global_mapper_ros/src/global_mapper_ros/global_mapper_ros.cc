@@ -26,22 +26,27 @@
 #include "global_mapper/global_mapper.h"
 #include "global_mapper/params.h"
 
-namespace global_mapper_ros {
-
+namespace global_mapper_ros
+{
 GlobalMapperRos::GlobalMapperRos()
-  : publish_occupancy_grid_(false),
-    publish_distance_grid_(false),
-    publish_cost_grid_(false),
-    publish_path_(false),
-    clear_unknown_distance_(0.0),
-    target_altitude_(0.0),
-    nh_(),
-    pnh_("~") {
+  : publish_occupancy_grid_(false)
+  , publish_distance_grid_(false)
+  , publish_cost_grid_(false)
+  , publish_path_(false)
+  , clear_unknown_distance_(0.0)
+  , target_altitude_(0.0)
+  , nh_()
+  , pnh_("~")
+{
   it_ptr_ = std::unique_ptr<image_transport::ImageTransport>(new image_transport::ImageTransport(pnh_));
   tf_listener_ptr_ = std::unique_ptr<tf2_ros::TransformListener>(new tf2_ros::TransformListener(tf_buffer_));
+  name_drone = ros::this_node::getNamespace();
+  // Erase slashes
+  name_drone.erase(0, 2);
 }
 
-void GlobalMapperRos::GetParams() {
+void GlobalMapperRos::GetParams()
+{
   fla_utils::SafeGetParam(pnh_, "global_frame", params_.global_frame);
   fla_utils::SafeGetParam(pnh_, "origin", params_.origin);
   fla_utils::SafeGetParam(pnh_, "world_dimensions", params_.world_dimensions);
@@ -71,30 +76,37 @@ void GlobalMapperRos::GetParams() {
   fla_utils::SafeGetParam(pnh_, "cost_grid/target_altitude", target_altitude_);
 }
 
-void GlobalMapperRos::InitSubscribers() {
+void GlobalMapperRos::InitSubscribers()
+{
   depth_sub_ = it_ptr_->subscribeCamera("depth_image_topic", 10, &GlobalMapperRos::DepthImageCallback, this);
   pose_sub_ = pnh_.subscribe("pose_topic", 10, &GlobalMapperRos::PoseCallback, this);
   goal_sub_ = pnh_.subscribe("goal_topic", 10, &GlobalMapperRos::GoalCallback, this);
 }
 
-void GlobalMapperRos::InitPublishers() {
-  if (publish_occupancy_grid_) {
+void GlobalMapperRos::InitPublishers()
+{
+  if (publish_occupancy_grid_)
+  {
     occ_grid_pub_ = pnh_.advertise<sensor_msgs::PointCloud2>("occupancy_grid_topic", 1);
   }
 
-  if (publish_unknown_grid_) {
+  if (publish_unknown_grid_)
+  {
     unknown_grid_pub_ = pnh_.advertise<sensor_msgs::PointCloud2>("unknown_grid_topic", 1);
   }
 
-  if (publish_distance_grid_) {
+  if (publish_distance_grid_)
+  {
     dist_grid_pub_ = pnh_.advertise<sensor_msgs::PointCloud2>("distance_grid_topic", 1);
   }
 
-  if (publish_cost_grid_) {
+  if (publish_cost_grid_)
+  {
     cost_grid_pub_ = pnh_.advertise<sensor_msgs::PointCloud2>("cost_grid_topic", 1);
   }
 
-  if (publish_path_) {
+  if (publish_path_)
+  {
     path_pub_ = pnh_.advertise<nav_msgs::Path>("path_topic", 1);
     sparse_path_pub_ = pnh_.advertise<nav_msgs::Path>("sparse_path_topic", 1);
   }
@@ -105,22 +117,26 @@ void GlobalMapperRos::InitPublishers() {
 }
 
 void GlobalMapperRos::PopulateUnknownPointCloudMsg(const voxel_grid::VoxelGrid<float>& occupancy_grid,
-                                                   sensor_msgs::PointCloud2* pointcloud) {
+                                                   sensor_msgs::PointCloud2* pointcloud)
+{
   // check for bad input
-  if (pointcloud == nullptr) {
+  if (pointcloud == nullptr)
+  {
     return;
   }
 
   geometry_msgs::TransformStamped transform_stamped;
   Eigen::Vector3d transform;
 
-  try {
-    transform_stamped = tf_buffer_.lookupTransform("world", "body",
-                                                   ros::Time(0), ros::Duration(0.02));
+  try
+  {
+    transform_stamped = tf_buffer_.lookupTransform("world", name_drone, ros::Time(0), ros::Duration(0.02));
     transform(0) = transform_stamped.transform.translation.x;
     transform(1) = transform_stamped.transform.translation.y;
     transform(2) = transform_stamped.transform.translation.z;
-  } catch (tf2::TransformException &ex) {
+  }
+  catch (tf2::TransformException& ex)
+  {
     ROS_WARN("[world_database_master_ros] OnGetTransform failed with %s", ex.what());
 
     transform(0) = std::numeric_limits<double>::quiet_NaN();
@@ -128,7 +144,7 @@ void GlobalMapperRos::PopulateUnknownPointCloudMsg(const voxel_grid::VoxelGrid<f
     transform(2) = std::numeric_limits<double>::quiet_NaN();
   }
 
-  double xyz[3] = {transform(0), transform(1), transform(2)};
+  double xyz[3] = { transform(0), transform(1), transform(2) };
   int slice_ixyz[3];
   occupancy_grid.WorldToGrid(xyz, slice_ixyz);
 
@@ -136,11 +152,14 @@ void GlobalMapperRos::PopulateUnknownPointCloudMsg(const voxel_grid::VoxelGrid<f
   occupancy_grid.GetGridDimensions(grid_dimensions);
 
   pcl::PointCloud<pcl::PointXYZ> cloud;
-  for (int x = 0; x < grid_dimensions[0]; x++) {
-    for (int y = 0; y < grid_dimensions[1]; y++) {
-      int ixyz[3] = {x, y, slice_ixyz[2]};
+  for (int x = 0; x < grid_dimensions[0]; x++)
+  {
+    for (int y = 0; y < grid_dimensions[1]; y++)
+    {
+      int ixyz[3] = { x, y, slice_ixyz[2] };
       float occupancy_value = occupancy_grid.ReadValue(ixyz);
-      if(global_mapper_ptr_->occupancy_grid_.IsUnknown(occupancy_value)) {
+      if (global_mapper_ptr_->occupancy_grid_.IsUnknown(occupancy_value))
+      {
         occupancy_grid.GridToWorld(ixyz, xyz);
         cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2]));
       }
@@ -153,23 +172,29 @@ void GlobalMapperRos::PopulateUnknownPointCloudMsg(const voxel_grid::VoxelGrid<f
 }
 
 void GlobalMapperRos::PopulateOccupancyPointCloudMsg(const voxel_grid::VoxelGrid<float>& occupancy_grid,
-                                                     sensor_msgs::PointCloud2* pointcloud) {
+                                                     sensor_msgs::PointCloud2* pointcloud)
+{
   // check for bad input
-  if (pointcloud == nullptr) {
+  if (pointcloud == nullptr)
+  {
     return;
   }
 
   int grid_dimensions[3];
   occupancy_grid.GetGridDimensions(grid_dimensions);
 
-  double xyz[3] = {0.0};
+  double xyz[3] = { 0.0 };
   pcl::PointCloud<pcl::PointXYZ> cloud;
-  for (int x = 0; x < grid_dimensions[0]; x++) {
-    for (int y = 0; y < grid_dimensions[1]; y++) {
-      for (int z = 0; z < grid_dimensions[2]; z++) {
-        int ixyz[3] = {x, y, z};
+  for (int x = 0; x < grid_dimensions[0]; x++)
+  {
+    for (int y = 0; y < grid_dimensions[1]; y++)
+    {
+      for (int z = 0; z < grid_dimensions[2]; z++)
+      {
+        int ixyz[3] = { x, y, z };
         float occupancy_value = occupancy_grid.ReadValue(ixyz);
-        if(global_mapper_ptr_->occupancy_grid_.IsOccupied(occupancy_value)) {
+        if (global_mapper_ptr_->occupancy_grid_.IsOccupied(occupancy_value))
+        {
           occupancy_grid.GridToWorld(ixyz, xyz);
           cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2]));
         }
@@ -183,22 +208,26 @@ void GlobalMapperRos::PopulateOccupancyPointCloudMsg(const voxel_grid::VoxelGrid
 }
 
 void GlobalMapperRos::PopulateDistancePointCloudMsg(const voxel_grid::VoxelGrid<int>& distance_grid,
-                                                    sensor_msgs::PointCloud2* pointcloud) {
+                                                    sensor_msgs::PointCloud2* pointcloud)
+{
   // check for bad input
-  if (pointcloud == nullptr) {
+  if (pointcloud == nullptr)
+  {
     return;
   }
 
   geometry_msgs::TransformStamped transform_stamped;
   Eigen::Vector3d transform;
 
-  try {
-    transform_stamped = tf_buffer_.lookupTransform("world", "body",
-                                                   ros::Time(0), ros::Duration(0.02));
+  try
+  {
+    transform_stamped = tf_buffer_.lookupTransform("world", name_drone, ros::Time(0), ros::Duration(0.02));
     transform(0) = transform_stamped.transform.translation.x;
     transform(1) = transform_stamped.transform.translation.y;
     transform(2) = transform_stamped.transform.translation.z;
-  } catch (tf2::TransformException &ex) {
+  }
+  catch (tf2::TransformException& ex)
+  {
     ROS_WARN("[world_database_master_ros] OnGetTransform failed with %s", ex.what());
 
     transform(0) = std::numeric_limits<double>::quiet_NaN();
@@ -209,16 +238,18 @@ void GlobalMapperRos::PopulateDistancePointCloudMsg(const voxel_grid::VoxelGrid<
   int grid_dimensions[3];
   distance_grid.GetGridDimensions(grid_dimensions);
 
-  double xyz[3] = {transform(0), transform(1), transform(2)};
+  double xyz[3] = { transform(0), transform(1), transform(2) };
   int slice_ixyz[3];
   distance_grid.WorldToGrid(xyz, slice_ixyz);
 
   pcl::PointCloud<pcl::PointXYZRGBA> cloud;
 
   static double max_dist = params_.truncation_distance * params_.truncation_distance;
-  for (int x = 0; x < grid_dimensions[0]; x++) {
-    for (int y = 0; y < grid_dimensions[1]; y++) {
-      int ixyz[3] = {x, y, slice_ixyz[2]};
+  for (int x = 0; x < grid_dimensions[0]; x++)
+  {
+    for (int y = 0; y < grid_dimensions[1]; y++)
+    {
+      int ixyz[3] = { x, y, slice_ixyz[2] };
       distance_grid.GridToWorld(ixyz, xyz);
       int cost = distance_grid.ReadValue(xyz);
       pcl::PointXYZRGBA point;
@@ -239,22 +270,26 @@ void GlobalMapperRos::PopulateDistancePointCloudMsg(const voxel_grid::VoxelGrid<
 }
 
 void GlobalMapperRos::PopulateCostPointCloudMsg(const voxel_grid::VoxelGrid<int>& cost_grid,
-                                                sensor_msgs::PointCloud2* pointcloud) {
+                                                sensor_msgs::PointCloud2* pointcloud)
+{
   // check for bad input
-  if (pointcloud == nullptr) {
+  if (pointcloud == nullptr)
+  {
     return;
   }
 
   geometry_msgs::TransformStamped transform_stamped;
   Eigen::Vector3d transform;
 
-  try {
-    transform_stamped = tf_buffer_.lookupTransform("world", "body",
-                                                   ros::Time(0), ros::Duration(0.02));
+  try
+  {
+    transform_stamped = tf_buffer_.lookupTransform("world", name_drone, ros::Time(0), ros::Duration(0.02));
     transform(0) = transform_stamped.transform.translation.x;
     transform(1) = transform_stamped.transform.translation.y;
     transform(2) = transform_stamped.transform.translation.z;
-  } catch (tf2::TransformException &ex) {
+  }
+  catch (tf2::TransformException& ex)
+  {
     ROS_WARN("[world_database_master_ros] OnGetTransform failed with %s", ex.what());
 
     transform(0) = std::numeric_limits<double>::quiet_NaN();
@@ -265,7 +300,7 @@ void GlobalMapperRos::PopulateCostPointCloudMsg(const voxel_grid::VoxelGrid<int>
   int grid_dimensions[3];
   cost_grid.GetGridDimensions(grid_dimensions);
 
-  double xyz[3] = {transform(0), transform(1), transform(2)};
+  double xyz[3] = { transform(0), transform(1), transform(2) };
   int slice_ixyz[3];
   cost_grid.WorldToGrid(xyz, slice_ixyz);
 
@@ -273,26 +308,33 @@ void GlobalMapperRos::PopulateCostPointCloudMsg(const voxel_grid::VoxelGrid<int>
 
   double max_cost = 0;
   double min_cost = std::numeric_limits<double>::max();
-  for (int x = 0; x < grid_dimensions[0]; x++) {
-    for (int y = 0; y < grid_dimensions[1]; y++) {
-      int ixyz[3] = {x, y, slice_ixyz[2]};
+  for (int x = 0; x < grid_dimensions[0]; x++)
+  {
+    for (int y = 0; y < grid_dimensions[1]; y++)
+    {
+      int ixyz[3] = { x, y, slice_ixyz[2] };
       cost_grid.GridToWorld(ixyz, xyz);
       int cost = cost_grid.ReadValue(xyz);
-      if(cost > max_cost && cost != cost_grid::MAX_COST) {
+      if (cost > max_cost && cost != cost_grid::MAX_COST)
+      {
         max_cost = cost;
       }
-      if(cost < min_cost) {
+      if (cost < min_cost)
+      {
         min_cost = cost;
       }
     }
   }
 
-  for (int x = 0; x < grid_dimensions[0]; x++) {
-    for (int y = 0; y < grid_dimensions[1]; y++) {
-      int ixyz[3] = {x, y, slice_ixyz[2]};
+  for (int x = 0; x < grid_dimensions[0]; x++)
+  {
+    for (int y = 0; y < grid_dimensions[1]; y++)
+    {
+      int ixyz[3] = { x, y, slice_ixyz[2] };
       cost_grid.GridToWorld(ixyz, xyz);
       int cost = cost_grid.ReadValue(xyz);
-      if(cost == cost_grid::MAX_COST) {
+      if (cost == cost_grid::MAX_COST)
+      {
         continue;
       }
       pcl::PointXYZ point;
@@ -308,10 +350,12 @@ void GlobalMapperRos::PopulateCostPointCloudMsg(const voxel_grid::VoxelGrid<int>
   pointcloud->header.stamp = ros::Time::now();
 }
 
-void GlobalMapperRos::PopulatePathMsg(const std::vector<std::array<double, 3>>& path, nav_msgs::Path* path_msg) {
+void GlobalMapperRos::PopulatePathMsg(const std::vector<std::array<double, 3>>& path, nav_msgs::Path* path_msg)
+{
   path_msg->header.stamp = ros::Time::now();
   path_msg->header.frame_id = "world";
-  for(const auto& point : path) {
+  for (const auto& point : path)
+  {
     geometry_msgs::PoseStamped pose;
     pose.pose.position.x = point[0];
     pose.pose.position.y = point[1];
@@ -323,17 +367,19 @@ void GlobalMapperRos::PopulatePathMsg(const std::vector<std::array<double, 3>>& 
 
 void GlobalMapperRos::PublishPlanningGrids(const voxel_grid::VoxelGrid<float>& occupancy_grid,
                                            const voxel_grid::VoxelGrid<int>& distance_grid,
-                                           const voxel_grid::VoxelGrid<int>& cost_grid) {
+                                           const voxel_grid::VoxelGrid<int>& cost_grid)
+{
   double origin[3];
   int grid_dimensions[3];
   occupancy_grid.GetOrigin(origin);
   occupancy_grid.GetGridDimensions(grid_dimensions);
 
-  global_mapper_ros::PlanningGrids::Ptr planning_grids_msg(new global_mapper_ros::PlanningGrids);    
+  global_mapper_ros::PlanningGrids::Ptr planning_grids_msg(new global_mapper_ros::PlanningGrids);
   planning_grids_msg->header.stamp = ros::Time::now();
   planning_grids_msg->header.frame_id = params_.global_frame;
   double projected_goal[3];
-  if(!global_mapper_ptr_->GetProjectedGoal(&projected_goal[0])) {
+  if (!global_mapper_ptr_->GetProjectedGoal(&projected_goal[0]))
+  {
     return;
   }
   planning_grids_msg->projected_goal[0] = projected_goal[0];
@@ -351,11 +397,12 @@ void GlobalMapperRos::PublishPlanningGrids(const voxel_grid::VoxelGrid<float>& o
   planning_grids_msg->cost_data = cost_grid.GetData();
   planning_grids_msg->dmax = global_mapper_ptr_->distance_grid_.GetMaxSquaredDistance();
   planning_grids_msg->occupied_threshold = global_mapper_ptr_->occupancy_grid_.GetThreshold();
-  
+
   planning_grids_pub_.publish(planning_grids_msg);
 }
 
-void GlobalMapperRos::Publish(const ros::TimerEvent& event) {
+void GlobalMapperRos::Publish(const ros::TimerEvent& event)
+{
   // get all maps
   voxel_grid::VoxelGrid<float> occupancy_grid;
   voxel_grid::VoxelGrid<int> distance_grid;
@@ -365,37 +412,42 @@ void GlobalMapperRos::Publish(const ros::TimerEvent& event) {
 
   PublishPlanningGrids(occupancy_grid, distance_grid, cost_grid);
 
-  if (publish_occupancy_grid_) {
+  if (publish_occupancy_grid_)
+  {
     sensor_msgs::PointCloud2 occ_pointcloud_msg;
     PopulateOccupancyPointCloudMsg(occupancy_grid, &occ_pointcloud_msg);
     occ_grid_pub_.publish(occ_pointcloud_msg);
   }
 
-  if (publish_unknown_grid_) {
+  if (publish_unknown_grid_)
+  {
     sensor_msgs::PointCloud2 unknown_pointcloud_msg;
     PopulateUnknownPointCloudMsg(occupancy_grid, &unknown_pointcloud_msg);
     unknown_grid_pub_.publish(unknown_pointcloud_msg);
   }
 
-  if (publish_distance_grid_) {
+  if (publish_distance_grid_)
+  {
     sensor_msgs::PointCloud2 dist_pointcloud_msg;
     PopulateDistancePointCloudMsg(distance_grid, &dist_pointcloud_msg);
     dist_grid_pub_.publish(dist_pointcloud_msg);
   }
 
-  if (publish_cost_grid_) {
+  if (publish_cost_grid_)
+  {
     sensor_msgs::PointCloud2 cost_pointcloud_msg;
     PopulateCostPointCloudMsg(cost_grid, &cost_pointcloud_msg);
     cost_grid_pub_.publish(cost_pointcloud_msg);
   }
 
-  if (publish_path_) {
+  if (publish_path_)
+  {
     double origin_xyz[3];
     global_mapper_ptr_->GetOrigin(origin_xyz);
 
     std::vector<std::array<double, 3>> dense_path, sparse_path;
     global_mapper_ptr_->GetPaths(&dense_path, &sparse_path);
-    
+
     nav_msgs::Path dense_path_msg, sparse_path_msg;
     PopulatePathMsg(dense_path, &dense_path_msg);
     PopulatePathMsg(sparse_path, &sparse_path_msg);
@@ -405,29 +457,31 @@ void GlobalMapperRos::Publish(const ros::TimerEvent& event) {
   }
 }
 
-void GlobalMapperRos::PoseCallback(const geometry_msgs::PoseStamped::ConstPtr& pose_ptr) {
-  double xyz[3] = {pose_ptr->pose.position.x,
-                   pose_ptr->pose.position.y,
-                   pose_ptr->pose.position.z};
-  if (!got_pose_) {
+void GlobalMapperRos::PoseCallback(const acl_msgs::ViconState::ConstPtr& pose_ptr)
+{
+  double xyz[3] = { pose_ptr->pose.position.x, pose_ptr->pose.position.y, pose_ptr->pose.position.z };
+  if (!got_pose_)
+  {
     got_pose_ = true;
   }
   global_mapper_ptr_->UpdateOrigin(xyz);
 }
 
-void GlobalMapperRos::GoalCallback(const geometry_msgs::PoseStamped::ConstPtr& goal_ptr) {
-  double xyz[3] = {goal_ptr->pose.position.x,
-                   goal_ptr->pose.position.y,
-                   target_altitude_};
-  if (!got_goal_) {
+void GlobalMapperRos::GoalCallback(const geometry_msgs::PoseStamped::ConstPtr& goal_ptr)
+{
+  double xyz[3] = { goal_ptr->pose.position.x, goal_ptr->pose.position.y, target_altitude_ };
+  if (!got_goal_)
+  {
     got_goal_ = true;
   }
   global_mapper_ptr_->SetGoal(xyz);
 }
 
 void GlobalMapperRos::DepthImageCallback(const sensor_msgs::Image::ConstPtr& image_msg,
-                     const sensor_msgs::CameraInfo::ConstPtr& camera_info_msg) {
-  if (!got_depth_image_) {
+                                         const sensor_msgs::CameraInfo::ConstPtr& camera_info_msg)
+{
+  if (!got_depth_image_)
+  {
     got_depth_image_ = true;
   }
   float cx, cy, fx, fy;
@@ -442,8 +496,9 @@ void GlobalMapperRos::DepthImageCallback(const sensor_msgs::Image::ConstPtr& ima
   cv_bridge::CvImageConstPtr depth_ptr = cv_bridge::toCvCopy(image_msg, "32FC1");
   cv::Mat1f depthmap(depth_ptr->image);
 
-  if (image_msg->encoding == "16UC1") {
-   depthmap /= 1000; // Convert to meters.
+  if (image_msg->encoding == "16UC1")
+  {
+    depthmap /= 1000;  // Convert to meters.
   }
 
   int height = depthmap.rows;
@@ -453,21 +508,27 @@ void GlobalMapperRos::DepthImageCallback(const sensor_msgs::Image::ConstPtr& ima
   float x_const = 1.0 / fx;
   float y_const = 1.0 / fy;
 
-  for (int i = 0; i < height; i++) {
-    for (int j = 0; j < width; j++) {
+  for (int i = 0; i < height; i++)
+  {
+    for (int j = 0; j < width; j++)
+    {
       pcl::PointXYZI point;
       float depth = depthmap(i, j);
       bool finite = std::isfinite(depth);
       bool NaN = (depth != depth);
 
-      if (!finite && depth < 0) {
+      if (!finite && depth < 0)
+      {
         continue;
       }
 
-      if (finite) {
+      if (finite)
+      {
         point.z = depth;
         point.intensity = 0;
-      } else {
+      }
+      else
+      {
         point.z = clear_unknown_distance_;
         point.intensity = depth;
       }
@@ -480,11 +541,13 @@ void GlobalMapperRos::DepthImageCallback(const sensor_msgs::Image::ConstPtr& ima
 
   const std::string target_frame = params_.global_frame;
   geometry_msgs::TransformStamped transform_stamped;
-  try {
+  try
+  {
     transform_stamped = tf_buffer_.lookupTransform(target_frame, image_msg->header.frame_id,
-                                                   ros::Time(image_msg->header.stamp),
-                                                   ros::Duration(0.12));
-  } catch (tf2::TransformException &ex) {
+                                                   ros::Time(image_msg->header.stamp), ros::Duration(0.12));
+  }
+  catch (tf2::TransformException& ex)
+  {
     ROS_WARN("[GlobalMapperRos::DepthImageCallback] %s", ex.what());
     return;
   }
@@ -495,16 +558,14 @@ void GlobalMapperRos::DepthImageCallback(const sensor_msgs::Image::ConstPtr& ima
   pcl::PointCloud<pcl::PointXYZI> world_cloud;
   pcl::transformPointCloud(cloud, world_cloud, eigen_transform);
 
-  world_cloud.sensor_origin_ <<
-    transform_stamped.transform.translation.x,
-    transform_stamped.transform.translation.y,
-    transform_stamped.transform.translation.z,
-    1;
-  
+  world_cloud.sensor_origin_ << transform_stamped.transform.translation.x, transform_stamped.transform.translation.y,
+      transform_stamped.transform.translation.z, 1;
+
   global_mapper_ptr_->PushPointCloud(world_cloud.makeShared());
 }
 
-void GlobalMapperRos::Run() {
+void GlobalMapperRos::Run()
+{
   GetParams();
   InitSubscribers();
   InitPublishers();
@@ -518,17 +579,25 @@ void GlobalMapperRos::Run() {
 
   // handle ros callbacks
   ros::Rate spin_rate(100.0);
-  while (ros::ok()) {
-    if (!got_pose_) {
+  while (ros::ok())
+  {
+    if (!got_pose_)
+    {
       process_status.SetStatus(fla_msgs::ProcessStatus::ALARM);
       process_status.SetArg(ProcessArgs::NO_POSE);
-    } else if (!got_goal_) {
+    }
+    else if (!got_goal_)
+    {
       process_status.SetStatus(fla_msgs::ProcessStatus::ALARM);
       process_status.SetArg(ProcessArgs::NO_GOAL);
-    } else if (!got_depth_image_) {
+    }
+    else if (!got_depth_image_)
+    {
       process_status.SetStatus(fla_msgs::ProcessStatus::ALARM);
       process_status.SetArg(ProcessArgs::NO_DEPTH_IMAGE);
-    } else {
+    }
+    else
+    {
       process_status.SetStatus(fla_msgs::ProcessStatus::READY);
       process_status.SetArg(ProcessArgs::NOMINAL);
     }
