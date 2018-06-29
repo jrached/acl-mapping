@@ -1,0 +1,45 @@
+<launch>
+  <arg name="load_params" default="true" />
+  <arg name="param_file" default="global_mapper.yaml" />
+
+  <!-- input topics -->
+  <arg name="pointcloud_topic" default="/flight/r200/points_xyz" />
+  <arg name="pose_topic" default="/pose" />
+  <arg name="goal_topic" default="/move_base_simple/goal" />
+
+  <!-- output topics -->
+  <arg name="occupancy_grid_topic" default="~occupancy_grid" />
+  <arg name="unknown_grid_topic" default="~unknown_grid" />
+  <arg name="distance_grid_topic" default="~distance_grid" />
+  <arg name="cost_grid_topic" default="~cost_grid" />
+  <arg name="path_topic" default="~path" />
+  
+  <!-- nodelet setup -->
+  <arg name="manager" default="global_mapper" />
+  <arg name="standalone" default="true" />
+
+  <!-- manager -->
+  <node if="$(arg standalone)"
+        pkg="nodelet" type="nodelet" name="$(arg manager)"
+        args="manager" output="screen" >
+    <!-- params -->
+    <rosparam command="load" if="$(arg load_params)" file="$(find global_mapper)/cfg/$(arg param_file)"/>
+
+    <!-- input remaps -->
+    <remap from="~pointcloud_topic" to="$(arg pointcloud_topic)" />
+    <remap from="~pose_topic" to="$(arg pose_topic)" />
+    <remap from="~goal_topic" to="$(arg goal_topic)" />
+
+    <!-- output remaps -->
+    <remap from="~occupancy_grid_topic" to="$(arg occupancy_grid_topic)" />
+    <remap from="~unknown_grid_topic" to="$(arg unknown_grid_topic)" />
+    <remap from="~distance_grid_topic" to="$(arg distance_grid_topic)" />
+    <remap from="~cost_grid_topic" to="$(arg cost_grid_topic)" />
+    <remap from="~path_topic" to="$(arg path_topic)" />
+  </node>
+
+  <!-- nodelet -->
+  <node pkg="nodelet" type="nodelet" name="global_mapper_nodelet"
+        args="load global_mapper/GlobalMapperNodelet $(arg manager)" output="screen">
+  </node>
+</launch>

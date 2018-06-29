@@ -1,0 +1,27 @@
+global_frame: world
+origin: [0.0, 0.0, 0.0]  # [m]
+world_dimensions: [60.0, 60.0, 6.0]  # [m]
+resolution: 0.5  # [m]
+
+occupancy_grid:
+  init_value: -1.0
+  hit_inc: 0.2  
+  miss_inc: -0.01
+  occupancy_threshold: 0.6  # [0.0, 1.0]
+  publish_occupancy_grid: true
+  publish_unknown_grid: true
+  clear_unknown_distance: 10.0  # [m]
+
+distance_grid:
+  truncation_distance: 6  # [voxels]
+  publish_distance_grid: false
+
+cost_grid:
+  publish_cost_grid: true
+  publish_path: true
+  inflation_distance: 4  # inflate obstacles by this many squared voxels
+  altitude_weight: 20
+  inflation_weight: 0
+  unknown_weight: 20
+  obstacle_weight: 10000
+  target_altitude: 2  # target altitude [m]
