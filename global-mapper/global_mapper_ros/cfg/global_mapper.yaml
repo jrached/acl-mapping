@@ -14,7 +14,7 @@ occupancy_grid:
 
 distance_grid:
   truncation_distance: 6  # [voxels]
-  publish_distance_grid: false
+  publish_distance_grid: true
 
 cost_grid:
   publish_cost_grid: true

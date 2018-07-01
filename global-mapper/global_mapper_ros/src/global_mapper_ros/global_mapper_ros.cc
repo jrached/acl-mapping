@@ -578,7 +578,7 @@ void GlobalMapperRos::Run()
   global_mapper_ptr_->Run();
 
   // handle ros callbacks
-  ros::Rate spin_rate(100.0);
+  ros::Rate spin_rate(100.0);  // 100 Hz
   while (ros::ok())
   {
     if (!got_pose_)
