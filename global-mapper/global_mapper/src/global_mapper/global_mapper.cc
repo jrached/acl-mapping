@@ -244,16 +244,16 @@ void GlobalMapper::Spin()
 
     origin_mutex_.lock();
     occupancy_grid_.UpdateOrigin(origin_);
-    // distance_grid_.UpdateOrigin(origin_);
-    // cost_grid_.UpdateOrigin(origin_);
+    distance_grid_.UpdateOrigin(origin_);
+    cost_grid_.UpdateOrigin(origin_);
     origin_mutex_.unlock();
 
     occupancy_grid_.ResetDiffs();
     UpdateOccupancyGrid();
-    // UpdateDistanceGrid();
+    UpdateDistanceGrid();
     if ((spincount++ % 15) == 0)
     {
-      // UpdateCostGrid();
+      UpdateCostGrid();
     }
     output_lock.unlock();
 
