@@ -8,6 +8,7 @@
 #include <mutex>
 #include <memory>
 #include <condition_variable>
+#include <chrono>
 
 #include <pcl/common/common_headers.h>
 
@@ -16,20 +17,20 @@
 #include "distance_grid/distance_grid.h"
 #include "cost_grid/cost_grid.h"
 
-namespace global_mapper {
-
+namespace global_mapper
+{
 using PointCloud = pcl::PointCloud<pcl::PointXYZI>;
 
-class GlobalMapper {
- public:
+class GlobalMapper
+{
+public:
   GlobalMapper(Params& params);
   ~GlobalMapper();
   GlobalMapper(const GlobalMapper& rhs) = delete;
   GlobalMapper& operator=(const GlobalMapper& rhs) = delete;
   GlobalMapper(GlobalMapper&& rhs) = delete;
   GlobalMapper& operator=(GlobalMapper&& rhs) = delete;
-  void GetVoxelGrids(voxel_grid::VoxelGrid<float>* occupancy_grid, 
-                     voxel_grid::VoxelGrid<int>* distance_grid, 
+  void GetVoxelGrids(voxel_grid::VoxelGrid<float>* occupancy_grid, voxel_grid::VoxelGrid<int>* distance_grid,
                      voxel_grid::VoxelGrid<int>* cost_grid);
   void PushPointCloud(const PointCloud::ConstPtr& cloud_ptr);
   void UpdateOrigin(const double xyz[3]);
@@ -49,7 +50,7 @@ class GlobalMapper {
   distance_grid::DistanceGrid distance_grid_;
   cost_grid::CostGrid cost_grid_;
 
- private:
+private:
   const PointCloud::ConstPtr PopPointCloud();
   void InsertPointCloud(const PointCloud::ConstPtr& point_cloud);
   void UpdateOccupancyGrid();
@@ -57,7 +58,7 @@ class GlobalMapper {
   void UpdateCostGrid();
   void Spin();
 
-  std::deque<PointCloud::ConstPtr > point_cloud_buffer_;
+  std::deque<PointCloud::ConstPtr> point_cloud_buffer_;
 
   std::mutex cloud_mutex_;
   std::mutex output_mutex_;
