@@ -78,9 +78,9 @@ void GlobalMapperRos::GetParams()
 
 void GlobalMapperRos::InitSubscribers()
 {
-  depth_sub_ = it_ptr_->subscribeCamera("depth_image_topic", 10, &GlobalMapperRos::DepthImageCallback, this);
-  pose_sub_ = pnh_.subscribe("pose_topic", 10, &GlobalMapperRos::PoseCallback, this);
-  goal_sub_ = pnh_.subscribe("goal_topic", 10, &GlobalMapperRos::GoalCallback, this);
+  depth_sub_ = it_ptr_->subscribeCamera("depth_image_topic", 1, &GlobalMapperRos::DepthImageCallback, this);
+  pose_sub_ = pnh_.subscribe("pose_topic", 1, &GlobalMapperRos::PoseCallback, this);
+  goal_sub_ = pnh_.subscribe("goal_topic", 1, &GlobalMapperRos::GoalCallback, this);
 }
 
 void GlobalMapperRos::InitPublishers()
@@ -113,7 +113,7 @@ void GlobalMapperRos::InitPublishers()
 
   planning_grids_pub_ = pnh_.advertise<global_mapper_ros::PlanningGrids>("planning_grids", 1);
 
-  grid_pub_timer_ = nh_.createTimer(ros::Duration(0.5), &GlobalMapperRos::Publish, this);
+  grid_pub_timer_ = nh_.createTimer(ros::Duration(0.05), &GlobalMapperRos::Publish, this);
 }
 
 void GlobalMapperRos::PopulateUnknownPointCloudMsg(const voxel_grid::VoxelGrid<float>& occupancy_grid,

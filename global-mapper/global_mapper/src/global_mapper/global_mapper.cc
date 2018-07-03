@@ -244,17 +244,17 @@ void GlobalMapper::Spin()
 
     origin_mutex_.lock();
     occupancy_grid_.UpdateOrigin(origin_);
-    distance_grid_.UpdateOrigin(origin_);
-    cost_grid_.UpdateOrigin(origin_);
+    // distance_grid_.UpdateOrigin(origin_);
+    // cost_grid_.UpdateOrigin(origin_);
     origin_mutex_.unlock();
 
     occupancy_grid_.ResetDiffs();
     UpdateOccupancyGrid();
-    UpdateDistanceGrid();
-    if ((spincount++ % 15) == 0)
-    {
-      UpdateCostGrid();
-    }
+    // UpdateDistanceGrid();
+    // if ((spincount++ % 15) == 0)
+    //{
+    //  UpdateCostGrid();
+    //}
     output_lock.unlock();
 
     auto end = std::chrono::steady_clock::now();
