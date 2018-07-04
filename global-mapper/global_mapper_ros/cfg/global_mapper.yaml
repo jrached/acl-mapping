@@ -1,7 +1,7 @@
 global_frame: world
 origin: [0.0, 0.0, 0.0]  # [m]
 world_dimensions: [60.0, 60.0, 6.0]  # [m]
-resolution: 0.5  # [m]
+resolution: 0.35  # [m]
 
 occupancy_grid:
   init_value: -1.0
