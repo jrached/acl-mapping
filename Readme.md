@@ -7,5 +7,6 @@ This is the mapping stack that Jake Ware and John Carter (CSAIL members of Nic. 
 
 `roslaunch global_mapper_ros global_mapper_node.launch quad:="SQ01s"`
 
+`rviz`
 
 
