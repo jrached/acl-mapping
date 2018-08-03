@@ -11,6 +11,7 @@
 #include <tf2_sensor_msgs/tf2_sensor_msgs.h>
 #include <tf2_eigen/tf2_eigen.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <std_msgs/Time.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <cv_bridge/cv_bridge.h>
 #include <Eigen/Dense>
@@ -204,7 +205,9 @@ void GlobalMapperRos::PopulateOccupancyPointCloudMsg(const voxel_grid::VoxelGrid
 
   pcl::toROSMsg(cloud, *pointcloud);
   pointcloud->header.frame_id = "world";
-  pointcloud->header.stamp = ros::Time::now();
+  // pointcloud->header.stamp = ros::Time::now();
+  // I (Jesus) changed the stamp so that it is the same as the last point cloud used in this map
+  pointcloud->header.stamp = tstampLastPclFused_;
 }
 
 void GlobalMapperRos::PopulateDistancePointCloudMsg(const voxel_grid::VoxelGrid<int>& distance_grid,
@@ -562,6 +565,8 @@ void GlobalMapperRos::DepthImageCallback(const sensor_msgs::Image::ConstPtr& ima
       transform_stamped.transform.translation.z, 1;
 
   global_mapper_ptr_->PushPointCloud(world_cloud.makeShared());
+
+  tstampLastPclFused_ = (*image_msg).header.stamp;
 }
 
 void GlobalMapperRos::Run()

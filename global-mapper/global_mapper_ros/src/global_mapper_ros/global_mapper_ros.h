@@ -75,6 +75,9 @@ private:
   ros::Publisher sparse_path_pub_;
   ros::Publisher planning_grids_pub_;
 
+  // time (in secs) of the last point cloud fused in this map
+  ros::Time tstampLastPclFused_;
+
   ros::Timer grid_pub_timer_;
 
   // subscribers
