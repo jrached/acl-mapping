@@ -1,7 +1,7 @@
 global_frame: world
 origin: [0.0, 0.0, 0.0]  # [m]
-world_dimensions: [60.0, 60.0, 6.0]  # [m]
-resolution: 0.35  # [m]
+world_dimensions: [20.0, 20.0, 4.0]  # [m]  60 60 6
+resolution: 0.15  # [m]   0.35
 
 occupancy_grid:
   init_value: -1.0
@@ -9,7 +9,7 @@ occupancy_grid:
   miss_inc: -0.01
   occupancy_threshold: 0.6  # [0.0, 1.0]
   publish_occupancy_grid: true
-  publish_unknown_grid: false
+  publish_unknown_grid: true
   clear_unknown_distance: 10.0  # [m]
 
 distance_grid:
