@@ -158,14 +158,17 @@ void GlobalMapper::UpdateOccupancyGrid()
   PointCloud::ConstPtr cloud_ptr = PopPointCloud();
   InsertPointCloud(cloud_ptr);
 
+  printf("RadiusDrone=%f\n", params_.radius_drone);
+  int n = (params_.radius_drone) / (params_.resolution);  // Number of voxels to clear in each side
+  n = (n > 1) ? n : 1;                                    // force n to be at least
   // clear voxels around vehicle
   int origin_ixyz[3];
   occupancy_grid_.WorldToGrid(origin_, origin_ixyz);
-  for (int i = -1; i <= 1; i++)
+  for (int i = -n; i <= n; i++)
   {
-    for (int j = -1; j <= 1; j++)
+    for (int j = -n; j <= n; j++)
     {
-      for (int k = -1; k <= 1; k++)
+      for (int k = -n; k <= n; k++)
       {
         int ixyz[3];
         ixyz[0] = origin_ixyz[0] + i;

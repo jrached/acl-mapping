@@ -2,6 +2,7 @@ global_frame: world
 origin: [0.0, 0.0, 0.0]  # [m]
 world_dimensions: [20.0, 20.0, 4.0]  # [m]  60 60 6
 resolution: 0.15  # [m]   0.35
+radius_drone: 0.8 # [m]
 
 occupancy_grid:
   init_value: -1.0

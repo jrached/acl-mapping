@@ -4,12 +4,15 @@
 #include <vector>
 #include <string>
 
-namespace global_mapper {
-struct Params {
+namespace global_mapper
+{
+struct Params
+{
   std::string global_frame = "world";
-  std::vector<double> origin = {0, 0, 0};
-  std::vector<double> world_dimensions = {5.0, 5.0, 1.0};
+  std::vector<double> origin = { 0, 0, 0 };
+  std::vector<double> world_dimensions = { 5.0, 5.0, 1.0 };
   double resolution = 1.0;
+  double radius_drone = 0.15;
 
   // occupancy_grid
   double init_value = 0;
@@ -18,7 +21,7 @@ struct Params {
   double occupancy_threshold = 0.6;
 
   // distance_grid
-  int truncation_distance = 6; // in voxels
+  int truncation_distance = 6;  // in voxels
 
   // cost_grid
   int inflation_distance = 4;

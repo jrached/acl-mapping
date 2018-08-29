@@ -52,6 +52,7 @@ void GlobalMapperRos::GetParams()
   fla_utils::SafeGetParam(pnh_, "origin", params_.origin);
   fla_utils::SafeGetParam(pnh_, "world_dimensions", params_.world_dimensions);
   fla_utils::SafeGetParam(pnh_, "resolution", params_.resolution);
+  fla_utils::SafeGetParam(pnh_, "radius_drone", params_.radius_drone);
 
   // occupancy_grid
   fla_utils::SafeGetParam(pnh_, "occupancy_grid/init_value", params_.init_value);
@@ -153,38 +154,41 @@ void GlobalMapperRos::PopulateUnknownPointCloudMsg(const voxel_grid::VoxelGrid<f
   occupancy_grid.GetGridDimensions(grid_dimensions);
 
   // If all the unknown grid is wanted
+  /*  pcl::PointCloud<pcl::PointXYZ> cloud;
+    for (int x = 0; x < grid_dimensions[0]; x++)
+    {
+      for (int y = 0; y < grid_dimensions[1]; y++)
+      {
+        for (int z = 0; z < grid_dimensions[2]; z++)
+        {
+          int ixyz[3] = { x, y, z };
+          float occupancy_value = occupancy_grid.ReadValue(ixyz);
+          if (global_mapper_ptr_->occupancy_grid_.IsUnknown(occupancy_value))
+          {
+            occupancy_grid.GridToWorld(ixyz, xyz);
+            cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2]));
+          }
+        }
+      }
+    }*/
+
+  // If only the slice whit z=z_drone is wanted
+
   pcl::PointCloud<pcl::PointXYZ> cloud;
   for (int x = 0; x < grid_dimensions[0]; x++)
   {
     for (int y = 0; y < grid_dimensions[1]; y++)
     {
-      for (int z = 0; z < grid_dimensions[2]; z++)
+      int ixyz[3] = { x, y, slice_ixyz[2] };
+      float occupancy_value = occupancy_grid.ReadValue(ixyz);
+      if (global_mapper_ptr_->occupancy_grid_.IsUnknown(occupancy_value))
       {
-        int ixyz[3] = { x, y, z };
-        float occupancy_value = occupancy_grid.ReadValue(ixyz);
-        if (global_mapper_ptr_->occupancy_grid_.IsUnknown(occupancy_value))
-        {
-          occupancy_grid.GridToWorld(ixyz, xyz);
-          cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2]));
-        }
+        occupancy_grid.GridToWorld(ixyz, xyz);
+        cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2]));
       }
     }
   }
 
-  // If only the slice whit z=z_drone is wanted
-  /*
-    pcl::PointCloud<pcl::PointXYZ> cloud;
-    for (int x = 0; x < grid_dimensions[0]; x++) {
-      for (int y = 0; y < grid_dimensions[1]; y++) {
-        int ixyz[3] = {x, y, slice_ixyz[2]};
-        float occupancy_value = occupancy_grid.ReadValue(ixyz);
-        if(global_mapper_ptr_->occupancy_grid_.IsUnknown(occupancy_value)) {
-          occupancy_grid.GridToWorld(ixyz, xyz);
-          cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2]));
-        }
-      }
-    }
-    */
   pcl::toROSMsg(cloud, *pointcloud);
   pointcloud->header.frame_id = "world";
   pointcloud->header.stamp = ros::Time::now();
