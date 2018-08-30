@@ -54,6 +54,7 @@ void GlobalMapperRos::GetParams()
   fla_utils::SafeGetParam(pnh_, "resolution", params_.resolution);
   fla_utils::SafeGetParam(pnh_, "radius_drone", params_.radius_drone);
   fla_utils::SafeGetParam(pnh_, "Ra", params_.Ra);
+  fla_utils::SafeGetParam(pnh_, "z_ground", params_.z_ground);
 
   // occupancy_grid
   fla_utils::SafeGetParam(pnh_, "occupancy_grid/init_value", params_.init_value);
@@ -170,12 +171,14 @@ void GlobalMapperRos::PopulateUnknownPointCloudMsg(const voxel_grid::VoxelGrid<f
         if (global_mapper_ptr_->occupancy_grid_.IsUnknown(occupancy_value))
         {
           occupancy_grid.GridToWorld(ixyz, xyz);
-
-          double dist2_to_map_origin =
-              pow(xyz[0] - origin[0], 2) + pow(xyz[1] - origin[1], 2) + pow(xyz[2] - origin[2], 2);
-          if (dist2_to_map_origin < pow(params_.Ra, 2))
+          if (xyz[2] > params_.z_ground)  // only publish points above the ground
           {
-            cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2]));
+            double dist2_to_map_origin =
+                pow(xyz[0] - origin[0], 2) + pow(xyz[1] - origin[1], 2) + pow(xyz[2] - origin[2], 2);
+            if (dist2_to_map_origin < pow(params_.Ra, 2))
+            {
+              cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2]));
+            }
           }
         }
       }
@@ -229,7 +232,10 @@ void GlobalMapperRos::PopulateOccupancyPointCloudMsg(const voxel_grid::VoxelGrid
         if (global_mapper_ptr_->occupancy_grid_.IsOccupied(occupancy_value))
         {
           occupancy_grid.GridToWorld(ixyz, xyz);
-          cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2]));
+          if (xyz[2] > params_.z_ground)  // only publish points above the ground
+          {
+            cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2]));
+          }
         }
       }
     }

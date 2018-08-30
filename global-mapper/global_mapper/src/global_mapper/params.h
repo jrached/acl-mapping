@@ -14,6 +14,7 @@ struct Params
   double resolution = 1.0;
   double radius_drone = 0.15;
   double Ra = 4.0;
+  double z_ground = 0;
 
   // occupancy_grid
   double init_value = 0;
