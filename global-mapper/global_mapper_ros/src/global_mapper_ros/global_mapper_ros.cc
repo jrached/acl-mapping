@@ -179,7 +179,7 @@ void GlobalMapperRos::PopulateUnknownPointCloudMsg(const voxel_grid::VoxelGrid<f
           {
             double dist2_to_map_origin =
                 pow(xyz[0] - origin[0], 2) + pow(xyz[1] - origin[1], 2) + pow(xyz[2] - origin[2], 2);
-            if (dist2_to_map_origin < pow(params_.Ra, 2))
+            if (dist2_to_map_origin < pow(params_.Ra, 2) && sqrt(dist2_to_map_origin) > 2 * params_.radius_drone)
             {
               cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2]));
             }
