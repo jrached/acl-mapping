@@ -109,6 +109,11 @@ void GlobalMapper::InsertPointCloud(const PointCloud::ConstPtr& cloud_ptr)
   double start[3] = { cloud_ptr->sensor_origin_[0], cloud_ptr->sensor_origin_[1], cloud_ptr->sensor_origin_[2] };
   double end[3] = { 0.0 };
 
+  int dim[3];
+  dim[0] = params_.world_dimensions.data()[0];
+  dim[1] = params_.world_dimensions.data()[1];
+  dim[2] = params_.world_dimensions.data()[2];
+
   for (int i = 0; i < cloud_ptr->points.size(); i++)
   {
     // clear
@@ -127,6 +132,20 @@ void GlobalMapper::InsertPointCloud(const PointCloud::ConstPtr& cloud_ptr)
     else
     {
       // Inf and valid: clear occupied and unknown
+      if (finite)
+      {
+        double tmp[3] = { 0.0 };
+        double end_antes[3] = { end[0], end[1], end[2] };
+
+        tmp[0] =
+            (fabs(end[0] - origin_[0]) >= (dim[0] / 2.0)) ? (origin_[0] + dim[0] / 2.0 - params_.resolution) : end[0];
+        tmp[1] =
+            (fabs(end[1] - origin_[1]) >= dim[1] / 2.0) ? (origin_[1] + dim[1] / 2.0 - params_.resolution) : end[1];
+        tmp[2] =
+            (fabs(end[2] - origin_[2]) >= dim[2] / 2.0) ? (origin_[2] + dim[2] / 2.0 - params_.resolution) : end[2];
+        occupancy_grid_.RayTrace(start, tmp, params_.miss_inc);
+        continue;
+      }
       occupancy_grid_.RayTrace(start, end, params_.miss_inc);
     }
   }

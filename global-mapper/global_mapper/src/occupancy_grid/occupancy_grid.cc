@@ -1,10 +1,11 @@
 #include "occupancy_grid/occupancy_grid.h"
 
-namespace occupancy_grid {
-
-OccupancyGrid::OccupancyGrid(const double origin[3], const double world_dimensions[3], const double resolution, float threshold) 
-  : voxel_grid::VoxelGrid<float>(origin, world_dimensions, resolution),
-    threshold_(threshold) {
+namespace occupancy_grid
+{
+OccupancyGrid::OccupancyGrid(const double origin[3], const double world_dimensions[3], const double resolution,
+                             float threshold)
+  : voxel_grid::VoxelGrid<float>(origin, world_dimensions, resolution), threshold_(threshold)
+{
   int num_cells = GetNumCells();
   Reset(-1);
   double indexer_origin[3];
@@ -12,66 +13,83 @@ OccupancyGrid::OccupancyGrid(const double origin[3], const double world_dimensio
   UpdateOrigin(indexer_origin);
 }
 
-void OccupancyGrid::PreShiftOrigin(const std::vector<int>& slice_indexes) {
+void OccupancyGrid::PreShiftOrigin(const std::vector<int>& slice_indexes)
+{
   // nothing
 }
 
-void OccupancyGrid::PostShiftOrigin(const std::vector<int>& slice_indexes) {
-  for(int index : slice_indexes) {
+void OccupancyGrid::PostShiftOrigin(const std::vector<int>& slice_indexes)
+{
+  for (int index : slice_indexes)
+  {
     WriteValue(index, -1);
   }
 }
 
-bool OccupancyGrid::IsOccupied(const int ixyz[3]) const {
+bool OccupancyGrid::IsOccupied(const int ixyz[3]) const
+{
   return IsOccupied(ReadValue(ixyz));
 }
 
-bool OccupancyGrid::IsOccupied(const double xyz[3]) const {
+bool OccupancyGrid::IsOccupied(const double xyz[3]) const
+{
   return IsOccupied(ReadValue(xyz));
 }
 
-bool OccupancyGrid::IsOccupied(float value) const {
+bool OccupancyGrid::IsOccupied(float value) const
+{
   return value > threshold_;
 }
 
-bool OccupancyGrid::IsUnknown(const int ixyz[3]) const {
+bool OccupancyGrid::IsUnknown(const int ixyz[3]) const
+{
   return IsUnknown(ReadValue(ixyz));
 }
 
-bool OccupancyGrid::IsUnknown(const double xyz[3]) const {
+bool OccupancyGrid::IsUnknown(const double xyz[3]) const
+{
   return IsUnknown(ReadValue(xyz));
 }
-bool OccupancyGrid::IsUnknown(float value) const {
+bool OccupancyGrid::IsUnknown(float value) const
+{
   return value < 0;
 }
 
-void OccupancyGrid::UpdateValue(const int ixyz[3], float value) {
+void OccupancyGrid::UpdateValue(const int ixyz[3], float value)
+{
   int ind = GridToIndex(ixyz);
   UpdateValue(ind, value);
 }
 
-void OccupancyGrid::UpdateValue(const double xyz[3], float value) {
+void OccupancyGrid::UpdateValue(const double xyz[3], float value)
+{
   int ixyz[3];
   WorldToGrid(xyz, ixyz);
-  if(IsInMap(ixyz)) {
+  if (IsInMap(ixyz))
+  {
     UpdateValue(ixyz, value);
-  } else {
+  }
+  else
+  {
     return;
   }
 }
 
-bool OccupancyGrid::IsOccupied(const int ind) const {
+bool OccupancyGrid::IsOccupied(const int ind) const
+{
   return ReadValue(ind) > threshold_;
 }
 
-void OccupancyGrid::UpdateValue(const int ind, float delta) {
+void OccupancyGrid::UpdateValue(const int ind, float delta)
+{
   float value = ReadValue(ind);
-  if (value < 0) {
+  if (value < 0)
+  {
     // Clear unknown. Don't increment if value < 0, just set to 0.
     WriteValue(ind, 0);
     value = 0;
-  } 
-  
+  }
+
   // Update value.
   bool occupied_before = IsOccupied(ind);
   float new_value = clamp_value(value + delta, 0.0f, 1.0f);
@@ -79,20 +97,23 @@ void OccupancyGrid::UpdateValue(const int ind, float delta) {
   bool occupied_after = IsOccupied(ind);
 
   double xyz[3];
-  if (!occupied_before && occupied_after) {
+  if (!occupied_before && occupied_after)
+  {
     IndexToWorld(ind, xyz);
-    marked_list_.push_back({xyz[0], xyz[1], xyz[2]});
+    marked_list_.push_back({ xyz[0], xyz[1], xyz[2] });
   }
 
-  if (occupied_before && !occupied_after) {
+  if (occupied_before && !occupied_after)
+  {
     IndexToWorld(ind, xyz);
-    cleared_list_.push_back({xyz[0], xyz[1], xyz[2]});
+    cleared_list_.push_back({ xyz[0], xyz[1], xyz[2] });
   }
 }
 
-void OccupancyGrid::RayTrace(const int start[3], const int end[3], float increment) {
-  //3D Bresenham implimentation copied from:
-  //http://www.cit.griffith.edu.au/~anthony/info/graphics/bresenham.procs
+void OccupancyGrid::RayTrace(const int start[3], const int end[3], float increment)
+{
+  // 3D Bresenham implimentation copied from:
+  // http://www.cit.griffith.edu.au/~anthony/info/graphics/bresenham.procs
 
   int x1, y1, z1, x2, y2, z2;
   x1 = start[0];
@@ -120,16 +141,20 @@ void OccupancyGrid::RayTrace(const int start[3], const int end[3], float increme
   dy2 = m << 1;
   dz2 = n << 1;
 
-  if ((l >= m) && (l >= n)) {
+  if ((l >= m) && (l >= n))
+  {
     err_1 = dy2 - l;
     err_2 = dz2 - l;
-    for (i = 0; i <= l; i++) {
+    for (i = 0; i <= l; i++)
+    {
       UpdateValue(voxel, increment);
-      if (err_1 > 0) {
+      if (err_1 > 0)
+      {
         voxel[1] += y_inc;
         err_1 -= dx2;
       }
-      if (err_2 > 0) {
+      if (err_2 > 0)
+      {
         voxel[2] += z_inc;
         err_2 -= dx2;
       }
@@ -138,16 +163,20 @@ void OccupancyGrid::RayTrace(const int start[3], const int end[3], float increme
       voxel[0] += x_inc;
     }
   }
-  else if ((m >= l) && (m >= n)) {
+  else if ((m >= l) && (m >= n))
+  {
     err_1 = dx2 - m;
     err_2 = dz2 - m;
-    for (i = 0; i <= m; i++) {
+    for (i = 0; i <= m; i++)
+    {
       UpdateValue(voxel, increment);
-      if (err_1 > 0) {
+      if (err_1 > 0)
+      {
         voxel[0] += x_inc;
         err_1 -= dy2;
       }
-      if (err_2 > 0) {
+      if (err_2 > 0)
+      {
         voxel[2] += z_inc;
         err_2 -= dy2;
       }
@@ -156,17 +185,21 @@ void OccupancyGrid::RayTrace(const int start[3], const int end[3], float increme
       voxel[1] += y_inc;
     }
   }
-  else {
+  else
+  {
     err_1 = dy2 - n;
     err_2 = dx2 - n;
-    for (i = 0; i <= n; i++) {
+    for (i = 0; i <= n; i++)
+    {
       UpdateValue(voxel, increment);
 
-      if (err_1 > 0) {
+      if (err_1 > 0)
+      {
         voxel[1] += y_inc;
         err_1 -= dz2;
       }
-      if (err_2 > 0) {
+      if (err_2 > 0)
+      {
         voxel[0] += x_inc;
         err_2 -= dz2;
       }
@@ -177,19 +210,24 @@ void OccupancyGrid::RayTrace(const int start[3], const int end[3], float increme
   }
 }
 
-void OccupancyGrid::RayTrace(const double start[3], const double end[3], float increment) {
+void OccupancyGrid::RayTrace(const double start[3], const double end[3], float increment)
+{
   int istart[3];
   int iend[3];
   WorldToGrid(start, istart);
   WorldToGrid(end, iend);
-  if(IsInMap(istart) && IsInMap(iend)) {
+  if (IsInMap(istart) && IsInMap(iend))
+  {
     RayTrace(istart, iend, increment);
-  } else {
+  }
+  else
+  {
     return;
   }
 }
 
-float OccupancyGrid::clamp_value(float x, float min, float max) const {
+float OccupancyGrid::clamp_value(float x, float min, float max) const
+{
   if (x < min)
     return min;
   if (x > max)
