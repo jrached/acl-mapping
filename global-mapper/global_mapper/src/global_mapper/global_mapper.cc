@@ -132,20 +132,6 @@ void GlobalMapper::InsertPointCloud(const PointCloud::ConstPtr& cloud_ptr)
     else
     {
       // Inf and valid: clear occupied and unknown
-      if (finite)
-      {
-        double tmp[3] = { 0.0 };
-        double end_antes[3] = { end[0], end[1], end[2] };
-
-        tmp[0] =
-            (fabs(end[0] - origin_[0]) >= (dim[0] / 2.0)) ? (origin_[0] + dim[0] / 2.0 - params_.resolution) : end[0];
-        tmp[1] =
-            (fabs(end[1] - origin_[1]) >= dim[1] / 2.0) ? (origin_[1] + dim[1] / 2.0 - params_.resolution) : end[1];
-        tmp[2] =
-            (fabs(end[2] - origin_[2]) >= dim[2] / 2.0) ? (origin_[2] + dim[2] / 2.0 - params_.resolution) : end[2];
-        occupancy_grid_.RayTrace(start, tmp, params_.miss_inc);
-        continue;
-      }
       occupancy_grid_.RayTrace(start, end, params_.miss_inc);
     }
   }
@@ -181,7 +167,7 @@ void GlobalMapper::UpdateOccupancyGrid()
   // int n = (params_.radius_drone) / (params_.resolution);  // Number of voxels to clear in each side
   // n = (n > 1) ? n : 1;                                    // force n to be at least 1
 
-  /*  int n = 0;
+    int n = 2;
     // clear voxels around vehicle
     int origin_ixyz[3];
     occupancy_grid_.WorldToGrid(origin_, origin_ixyz);
@@ -198,7 +184,7 @@ void GlobalMapper::UpdateOccupancyGrid()
           occupancy_grid_.UpdateValue(ixyz, -1.0);
         }
       }
-    }*/
+    }
 }
 
 void GlobalMapper::UpdateCostGrid()

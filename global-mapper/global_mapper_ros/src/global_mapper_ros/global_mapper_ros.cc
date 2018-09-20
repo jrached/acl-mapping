@@ -55,6 +55,7 @@ void GlobalMapperRos::GetParams()
   fla_utils::SafeGetParam(pnh_, "radius_drone", params_.radius_drone);
   fla_utils::SafeGetParam(pnh_, "Ra", params_.Ra);
   fla_utils::SafeGetParam(pnh_, "z_ground", params_.z_ground);
+  fla_utils::SafeGetParam(pnh_, "skip", params_.skip);
 
   // occupancy_grid
   fla_utils::SafeGetParam(pnh_, "occupancy_grid/init_value", params_.init_value);
@@ -578,9 +579,9 @@ void GlobalMapperRos::DepthImageCallback(const sensor_msgs::Image::ConstPtr& ima
   float x_const = 1.0 / fx;
   float y_const = 1.0 / fy;
 
-  for (int i = 0; i < height; i++)
+  for (int i = 0; i < height; i=i+(params_.skip+1))
   {
-    for (int j = 0; j < width; j++)
+    for (int j = 0; j < width; j=j+(params_.skip+1))
     {
       pcl::PointXYZI point;
       float depth = depthmap(i, j);
