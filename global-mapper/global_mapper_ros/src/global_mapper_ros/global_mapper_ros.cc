@@ -56,6 +56,7 @@ void GlobalMapperRos::GetParams()
   fla_utils::SafeGetParam(pnh_, "Ra", params_.Ra);
   fla_utils::SafeGetParam(pnh_, "z_ground", params_.z_ground);
   fla_utils::SafeGetParam(pnh_, "skip", params_.skip);
+  fla_utils::SafeGetParam(pnh_, "depth_max", params_.depth_max);
 
   // occupancy_grid
   fla_utils::SafeGetParam(pnh_, "occupancy_grid/init_value", params_.init_value);
@@ -579,9 +580,9 @@ void GlobalMapperRos::DepthImageCallback(const sensor_msgs::Image::ConstPtr& ima
   float x_const = 1.0 / fx;
   float y_const = 1.0 / fy;
 
-  for (int i = 0; i < height; i=i+(params_.skip+1))
+  for (int i = 0; i < height; i = i + (params_.skip + 1))
   {
-    for (int j = 0; j < width; j=j+(params_.skip+1))
+    for (int j = 0; j < width; j = j + (params_.skip + 1))
     {
       pcl::PointXYZI point;
       float depth = depthmap(i, j);
@@ -595,16 +596,16 @@ void GlobalMapperRos::DepthImageCallback(const sensor_msgs::Image::ConstPtr& ima
 
       if (finite)
       {
-        if(depth>4.5){
-        point.z = clear_unknown_distance_;
-        point.intensity = 1.0/0.0;
-	} 
-	else{
-        point.z = depth;
-        point.intensity = 0;
-	}
-        
-       
+        if (depth > params_.depth_max)
+        {
+          point.z = clear_unknown_distance_;
+          point.intensity = 1.0 / 0.0;
+        }
+        else
+        {
+          point.z = depth;
+          point.intensity = 0;
+        }
       }
       else
       {
