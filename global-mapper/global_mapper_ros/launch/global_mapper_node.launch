@@ -7,7 +7,7 @@
   <arg name="param_file" default="global_mapper.yaml" />
 
   <!-- input topics -->
-  <arg name="depth_image_topic" default="camera/depth/image_rect_raw" />   <!--/depthmap_filter/depth_filt-->
+  <arg name="depth_image_topic" default="camera/depth/image_raw" />   <!--camera/depth/image_rect_raw for HARDWARE-->
   <arg name="pose_topic" default="vicon" /> <!--/pose-->
   <arg name="goal_topic" default="/move_base_simple/goal" />
 
