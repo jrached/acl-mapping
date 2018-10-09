@@ -5,9 +5,9 @@ world_dimensions: [20.0, 20.0, 3]  # [m]  60 60 6
 resolution: 0.25  # [m]   0.35
 radius_drone: 0.5 # [m] THIS SHOULD BE HIGHER THAN THE RESOLUTION!!
 Ra: 4.0 # [m] radius of the first sphere (Sa) in the planner. The unknown pcloud published will only contain points inside this sphere
-z_ground: 0.6 #[m] points below z_ground are not published
+z_ground: 0.5 #[m] points below z_ground are not published
 skip: 0  #[pixels] Numbers of pixels to skip in the depth map. Should be >=0
-depth_max: 4.5 #[m] In the depth image, points farther than depth_max, are treated as inf 
+depth_max: 3 #[m] In the depth image, points farther than depth_max, are treated as inf 
 
 occupancy_grid:
   init_value: -1.0
