@@ -9,7 +9,7 @@
   <!-- input topics -->
   <!--HARDWARE:   camera/depth/image_rect_raw -->
   <!--SIMULATION:  camera/depth/image_raw -->
-  <arg name="depth_image_topic" default="camera/depth/image_rect_raw" />   
+  <arg name="depth_image_topic" default="camera/depth/image_raw" />   
   <arg name="pose_topic" default="vicon" /> <!--/pose-->
   <arg name="goal_topic" default="/move_base_simple/goal" />
 
