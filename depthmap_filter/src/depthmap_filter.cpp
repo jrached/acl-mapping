@@ -17,9 +17,10 @@
 
 #include <opencv2/highgui/highgui.hpp>
 
-namespace depthmap_filter {
-
-void DepthmapFilter::onInit() {
+namespace depthmap_filter
+{
+void DepthmapFilter::onInit()
+{
   // Grab a handle to the parent node.
   nh_ = getNodeHandle();
   pnh_ = getPrivateNodeHandle();
@@ -56,18 +57,14 @@ void DepthmapFilter::onInit() {
   info_sub_.subscribe(nh_, "camera_info", 10);
 
   // Set up synchronizer.
-  sync_.reset(new RGBDSynchronizer(RGBDPolicy(10), rgb_sub_, depth_sub_,
-                                   info_sub_));
-  sync_->registerCallback(boost::bind(&DepthmapFilter::RGBDCallback,
-                                      this, _1, _2, _3));
+  sync_.reset(new RGBDSynchronizer(RGBDPolicy(10), rgb_sub_, depth_sub_, info_sub_));
+  sync_->registerCallback(boost::bind(&DepthmapFilter::RGBDCallback, this, _1, _2, _3));
 
   // Setup publisher.
   depth_pub_ = it_->advertiseCamera("depth_filtered", 10);
 
 #ifdef FLA_HEALTH_STATUS
-  heart_beat_ = nh_.createTimer(ros::Duration(heart_beat_dt_),
-                                &DepthmapFilter::HeartBeat,
-                                this);
+  heart_beat_ = nh_.createTimer(ros::Duration(heart_beat_dt_), &DepthmapFilter::HeartBeat, this);
   heart_beat_pub_ = nh_.advertise<fla_msgs::ProcessStatus>("/globalstatus", 1);
 #endif
 
@@ -79,9 +76,11 @@ void DepthmapFilter::onInit() {
 
 void DepthmapFilter::RGBDCallback(const sensor_msgs::Image::ConstPtr& rgb_msg,
                                   const sensor_msgs::Image::ConstPtr& depth_msg,
-                                  const sensor_msgs::CameraInfo::ConstPtr& cinfo) {
+                                  const sensor_msgs::CameraInfo::ConstPtr& cinfo)
+{
   num_imgs_++;
-  if (num_imgs_ % downsample_factor_ != 0) {
+  if (num_imgs_ % downsample_factor_ != 0)
+  {
     // Downsample image stream.
     return;
   }
@@ -100,22 +99,27 @@ void DepthmapFilter::RGBDCallback(const sensor_msgs::Image::ConstPtr& rgb_msg,
   depth_ptr = cv_bridge::toCvCopy(depth_msg, "32FC1");
   cv::Mat1f depthmap(depth_ptr->image);
 
-  if (depth_msg->encoding == "16UC1") {
-    depthmap /= 1000; // Convert to meters.
+  if (depth_msg->encoding == "16UC1")
+  {
+    depthmap /= 1000;  // Convert to meters.
   }
 
   int height = depthmap.rows;
   int width = depthmap.cols;
   cv::Mat1f depthmap_filt(height, width, 0.0f);
 
-  if (do_gradient_filter_) {
+  if (do_gradient_filter_)
+  {
     // Apply simple derivative filter to remove smearing across depth
     // discontinuities.
     float grad_thresh2 = max_grad_mag_ * max_grad_mag_;
-    for (int ii = 1; ii < height - 1; ++ii) {
-      for (int jj = 1; jj < width - 1; ++jj) {
-        if ((depthmap(ii, jj + 1) <= 0) || (depthmap(ii, jj - 1) <= 0) ||
-            (depthmap(ii + 1, jj) <= 0) || (depthmap(ii - 1, jj) <= 0)) {
+    for (int ii = 1; ii < height - 1; ++ii)
+    {
+      for (int jj = 1; jj < width - 1; ++jj)
+      {
+        if ((depthmap(ii, jj + 1) <= 0) || (depthmap(ii, jj - 1) <= 0) || (depthmap(ii + 1, jj) <= 0) ||
+            (depthmap(ii - 1, jj) <= 0))
+        {
           continue;
         }
 
@@ -123,22 +127,29 @@ void DepthmapFilter::RGBDCallback(const sensor_msgs::Image::ConstPtr& rgb_msg,
         float gx = 0.5f * (depthmap(ii, jj + 1) - depthmap(ii, jj - 1));
         float gy = 0.5f * (depthmap(ii + 1, jj) - depthmap(ii - 1, jj));
 
-        float grad_mag2 = gx*gx + gy*gy;
-        if (grad_mag2 < grad_thresh2) {
+        float grad_mag2 = gx * gx + gy * gy;
+        if (grad_mag2 < grad_thresh2)
+        {
           depthmap_filt(ii, jj) = depthmap(ii, jj);
         }
       }
     }
-  } else {
+  }
+  else
+  {
     depthmap_filt = depthmap;
   }
 
-  if (do_saturation_filter_) {
+  if (do_saturation_filter_)
+  {
     // Remove oversaturated regions.
     cv::Mat1b sat_mask(height, width, static_cast<uint8_t>(0));
-    for (int ii = 0; ii < height; ++ii) {
-      for (int jj = 0; jj < width; ++jj) {
-        if (gray(ii, jj) >= saturation_thresh_) {
+    for (int ii = 0; ii < height; ++ii)
+    {
+      for (int jj = 0; jj < width; ++jj)
+      {
+        if (gray(ii, jj) >= saturation_thresh_)
+        {
           sat_mask(ii, jj) = 255;
         }
       }
@@ -148,51 +159,60 @@ void DepthmapFilter::RGBDCallback(const sensor_msgs::Image::ConstPtr& rgb_msg,
     // cv::imshow("sat_mask", sat_mask);
     // cv::waitKey(1);
 
-    for (int ii = 0; ii < height; ++ii) {
-      for (int jj = 0; jj < width; ++jj) {
-        if (sat_mask(ii, jj) > 0) {
+    for (int ii = 0; ii < height; ++ii)
+    {
+      for (int jj = 0; jj < width; ++jj)
+      {
+        if (sat_mask(ii, jj) > 0)
+        {
           depthmap_filt(ii, jj) = 0.0f;
         }
       }
     }
   }
 
-  if (do_morph_open_) {
+  if (do_morph_open_)
+  {
     // Apply opening operator to remove speckle noise.
-    cv::Mat struct_el(morph_open_size_, morph_open_size_,
-                      cv::DataType<uint8_t>::type, cv::Scalar(1));
+    cv::Mat struct_el(morph_open_size_, morph_open_size_, cv::DataType<uint8_t>::type, cv::Scalar(1));
     cv::morphologyEx(depthmap_filt, depthmap_filt, cv::MORPH_OPEN, struct_el);
   }
 
-  if (do_morph_close_) {
+  if (do_morph_close_)
+  {
     // Apply closing operator to connect fragmented components.
-    cv::Mat struct_el(morph_close_size_, morph_close_size_,
-                      cv::DataType<uint8_t>::type, cv::Scalar(1));
+    cv::Mat struct_el(morph_close_size_, morph_close_size_, cv::DataType<uint8_t>::type, cv::Scalar(1));
     cv::morphologyEx(depthmap_filt, depthmap_filt, cv::MORPH_CLOSE, struct_el);
   }
 
-  if (max_depth_ > 0.0f) {
+  if (max_depth_ > 0.0f)
+  {
     // Clip depths beyond max depth.
-    for (int ii = 0; ii < height; ++ii) {
-      for (int jj = 0; jj < width; ++jj) {
-        if ((depthmap_filt(ii, jj) >= max_depth_)) {
+    for (int ii = 0; ii < height; ++ii)
+    {
+      for (int jj = 0; jj < width; ++jj)
+      {
+        if ((depthmap_filt(ii, jj) >= max_depth_))
+        {
           depthmap_filt(ii, jj) = std::numeric_limits<float>::infinity();
         }
 
-        if(std::fabs(depthmap_filt(ii, jj)) < 1e-6) {
+        if (std::fabs(depthmap_filt(ii, jj)) < 1e-6)
+        {
           depthmap_filt(ii, jj) = std::numeric_limits<float>::quiet_NaN();
         }
 
-        if ((depthmap_filt(ii, jj) <= min_depth_)) {
-         depthmap_filt(ii, jj) = -std::numeric_limits<float>::infinity();
+        if ((depthmap_filt(ii, jj) <= min_depth_))
+        {
+          depthmap_filt(ii, jj) = -std::numeric_limits<float>::infinity();
         }
-
       }
     }
   }
 
   int binning = 1;
-  for(int i = 0; i < pyramid_level_; i++) {
+  for (int i = 0; i < pyramid_level_; i++)
+  {
     depthmap_filt = DownsampleImage(depthmap_filt);
     binning *= 2;
   }
@@ -205,61 +225,76 @@ void DepthmapFilter::RGBDCallback(const sensor_msgs::Image::ConstPtr& rgb_msg,
   depth_pub_.publish(*depth_cvb.toImageMsg(), downsampled_cinfo);
 
   ros::WallDuration runtime = ros::WallTime::now() - start;
-  NODELET_DEBUG("DepthmapFilter/ImageCallback = %f ms\n",
-                runtime.toSec() * 1000);
+  NODELET_DEBUG("DepthmapFilter/ImageCallback = %f ms\n", runtime.toSec() * 1000);
+  printf("DepthmapFilter/ImageCallback = %f ms\n", runtime.toSec() * 1000);
 
   last_update_sec_ = ros::Time::now().toSec();
 
   return;
 }
 
-cv::Mat1f DepthmapFilter::DownsampleImage(cv::Mat1f& original_img) {
- int downsampled_height = original_img.rows >> 1;
- int downsampled_width = original_img.cols >> 1;
- cv::Mat1f downsampled_img(downsampled_height, downsampled_width, 0.0f);
+cv::Mat1f DepthmapFilter::DownsampleImage(cv::Mat1f& original_img)
+{
+  int downsampled_height = original_img.rows >> 1;
+  int downsampled_width = original_img.cols >> 1;
+  cv::Mat1f downsampled_img(downsampled_height, downsampled_width, 0.0f);
   // //downsample
-  for (int ii = 0; ii < downsampled_height; ++ii) {
-    for (int jj = 0; jj < downsampled_width; ++jj) {
-
+  for (int ii = 0; ii < downsampled_height; ++ii)
+  {
+    for (int jj = 0; jj < downsampled_width; ++jj)
+    {
       int parent_ii = ii << 1;
       int parent_jj = jj << 1;
       int nan_count = 0;
       int inf_count = 0;
       int neg_inf_count = 0;
       int valid_depth_count = 0;
-      float depths[4] = {
-        original_img(parent_ii, parent_jj),
-        original_img(parent_ii+1, parent_jj),
-        original_img(parent_ii, parent_jj+1),
-        original_img(parent_ii+1, parent_jj+1)
-      };
+      float depths[4] = { original_img(parent_ii, parent_jj), original_img(parent_ii + 1, parent_jj),
+                          original_img(parent_ii, parent_jj + 1), original_img(parent_ii + 1, parent_jj + 1) };
       float total_depth = 0.0f;
       float min_valid_depth = std::numeric_limits<float>::infinity();
 
-      for (int i = 0; i < 4; i++) {
-        if(depths[i] != depths[i]) {
+      for (int i = 0; i < 4; i++)
+      {
+        if (depths[i] != depths[i])
+        {
           nan_count++;
-        } else if(!std::isfinite(depths[i])) {
-          if(depths[i] < 0) {
+        }
+        else if (!std::isfinite(depths[i]))
+        {
+          if (depths[i] < 0)
+          {
             neg_inf_count++;
-          } else {
+          }
+          else
+          {
             inf_count++;
           }
-        } else {
+        }
+        else
+        {
           total_depth += depths[i];
           valid_depth_count++;
-          if(depths[i] < min_valid_depth) {
+          if (depths[i] < min_valid_depth)
+          {
             min_valid_depth = depths[i];
           }
         }
       }
-      if(valid_depth_count > 0) {
+      if (valid_depth_count > 0)
+      {
         downsampled_img(ii, jj) = total_depth / valid_depth_count;
-      } else if(neg_inf_count > 0) {
+      }
+      else if (neg_inf_count > 0)
+      {
         downsampled_img(ii, jj) = -std::numeric_limits<float>::infinity();
-      } else if(inf_count > 0) {
+      }
+      else if (inf_count > 0)
+      {
         downsampled_img(ii, jj) = std::numeric_limits<float>::infinity();
-      } else {
+      }
+      else
+      {
         downsampled_img(ii, jj) = std::numeric_limits<float>::quiet_NaN();
       }
     }
@@ -268,7 +303,8 @@ cv::Mat1f DepthmapFilter::DownsampleImage(cv::Mat1f& original_img) {
 }
 
 #ifdef FLA_HEALTH_STATUS
-void DepthmapFilter::HeartBeat(const ros::TimerEvent&) {
+void DepthmapFilter::HeartBeat(const ros::TimerEvent&)
+{
   double now = ros::Time::now().toSec();
 
   fla_msgs::ProcessStatus::Ptr ps(new fla_msgs::ProcessStatus);
@@ -276,15 +312,20 @@ void DepthmapFilter::HeartBeat(const ros::TimerEvent&) {
   ps->id = static_cast<uint8_t>(node_id_);
   ps->pid = getpid();
 
-  if (now - last_update_sec_ > alarm_timeout_)  {
+  if (now - last_update_sec_ > alarm_timeout_)
+  {
     ps->status = fla_msgs::ProcessStatus::ALARM;
-    ps->arg = Status::ALARM_TIMEOUT; // Time since last update longer than expected.
-  } else if (now - last_update_sec_ > fail_timeout_) {
+    ps->arg = Status::ALARM_TIMEOUT;  // Time since last update longer than expected.
+  }
+  else if (now - last_update_sec_ > fail_timeout_)
+  {
     ps->status = fla_msgs::ProcessStatus::FAIL;
-    ps->arg = Status::FAIL_TIMEOUT; // Time since last update probably error.
-  } else {
+    ps->arg = Status::FAIL_TIMEOUT;  // Time since last update probably error.
+  }
+  else
+  {
     ps->status = fla_msgs::ProcessStatus::READY;
-    ps->arg = Status::GOOD; // All good.
+    ps->arg = Status::GOOD;  // All good.
   }
 
   heart_beat_pub_.publish(ps);

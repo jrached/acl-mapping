@@ -21,7 +21,7 @@ max_grad_mag: 0.03
 do_saturation_filter: false
 saturation_thresh: 253
 
-# 3. Morphological filter params.
+# 3. Morphological filter params. Morphological transformation are explained in https://docs.opencv.org/3.4/d9/d61/tutorial_py_morphological_ops.html
 morph:
   do_open: true
   open_size: 7
