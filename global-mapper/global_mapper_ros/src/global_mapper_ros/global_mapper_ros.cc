@@ -552,6 +552,9 @@ void GlobalMapperRos::GoalCallback(const geometry_msgs::PoseStamped::ConstPtr& g
 void GlobalMapperRos::DepthImageCallback(const sensor_msgs::Image::ConstPtr& image_msg,
                                          const sensor_msgs::CameraInfo::ConstPtr& camera_info_msg)
 {
+  // ROS_INFO("Mapper:: DepthImage received, Timestamp=");
+  // std::cout << image_msg->header.stamp << std::endl;
+
   if (!got_depth_image_)
   {
     got_depth_image_ = true;

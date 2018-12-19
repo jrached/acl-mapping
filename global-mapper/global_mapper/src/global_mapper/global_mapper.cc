@@ -68,6 +68,8 @@ void GlobalMapper::PushPointCloud(const PointCloud::ConstPtr& cloud_ptr)
 {
   // push
   std::lock_guard<std::mutex> cloud_lock(cloud_mutex_);
+
+  point_cloud_buffer_.clear();  // Jesus added this (remove all the previous point clouds--> queue will be only 1)
   point_cloud_buffer_.push_back(cloud_ptr);
 
   // notify
@@ -167,24 +169,24 @@ void GlobalMapper::UpdateOccupancyGrid()
   // int n = (params_.radius_drone) / (params_.resolution);  // Number of voxels to clear in each side
   // n = (n > 1) ? n : 1;                                    // force n to be at least 1
 
-    int n = 2;
-    // clear voxels around vehicle
-    int origin_ixyz[3];
-    occupancy_grid_.WorldToGrid(origin_, origin_ixyz);
-    for (int i = -n; i <= n; i++)
+  int n = 2;
+  // clear voxels around vehicle
+  int origin_ixyz[3];
+  occupancy_grid_.WorldToGrid(origin_, origin_ixyz);
+  for (int i = -n; i <= n; i++)
+  {
+    for (int j = -n; j <= n; j++)
     {
-      for (int j = -n; j <= n; j++)
+      for (int k = -n; k <= n; k++)
       {
-        for (int k = -n; k <= n; k++)
-        {
-          int ixyz[3];
-          ixyz[0] = origin_ixyz[0] + i;
-          ixyz[1] = origin_ixyz[1] + j;
-          ixyz[2] = origin_ixyz[2] + k;
-          occupancy_grid_.UpdateValue(ixyz, -1.0);
-        }
+        int ixyz[3];
+        ixyz[0] = origin_ixyz[0] + i;
+        ixyz[1] = origin_ixyz[1] + j;
+        ixyz[2] = origin_ixyz[2] + k;
+        occupancy_grid_.UpdateValue(ixyz, -1.0);
       }
     }
+  }
 }
 
 void GlobalMapper::UpdateCostGrid()
