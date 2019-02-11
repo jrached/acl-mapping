@@ -44,6 +44,7 @@ GlobalMapperRos::GlobalMapperRos()
   name_drone = ros::this_node::getNamespace();
   // Erase slashes
   name_drone.erase(0, 2);
+  std::cout << "**************This is the name of the drone: " << name_drone << std::endl;
 }
 
 void GlobalMapperRos::GetParams()

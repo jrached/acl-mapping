@@ -6,14 +6,18 @@
 #include <nodelet/nodelet.h>
 
 #include "global_mapper_ros/global_mapper_ros.h"
+#include "global_mapper/global_mapper.h"
 
-namespace global_mapper_ros {
-
-class GlobalMapperNodelet : public nodelet::Nodelet {
- public:
-  virtual void onInit() {
+namespace global_mapper_ros
+{
+class GlobalMapperNodelet : public nodelet::Nodelet
+{
+public:
+  virtual void onInit()
+  {
     GlobalMapperRos global_mapper_ros;
-    NODELET_INFO("Starting loop");
+    std::cout << "Starting LOOP*************" << std::endl;
+    NODELET_INFO("*************************Starting loop");
     global_mapper_ros.Run();
 
     return;

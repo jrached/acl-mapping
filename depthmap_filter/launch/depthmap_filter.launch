@@ -33,7 +33,7 @@
     <remap from="depth" to="$(arg input_depthmap)" />
     <remap from="camera_info" to="$(arg input_camera_info)" />
 
-    <remap from="depth_filtered" to="/depthmap_filter/depth_filt" />
+    <remap from="depth_filtered" to="depthmap_filter/depth_filt" />
     <remap from="status" to="$(arg status)" />
     <remap from="event" to="$(arg event)" />
   </node>

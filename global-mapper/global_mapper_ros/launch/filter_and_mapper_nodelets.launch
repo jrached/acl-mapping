@@ -1,0 +1,16 @@
+<launch>
+	<arg name="quad" default="SQ01s"/>
+		      
+    <!-- Launch Filter -->
+	<include file="$(find depthmap_filter)/launch/depthmap_filter.launch">
+		<arg name="quad" value="$(arg quad)"/>
+	</include>
+
+	<!-- Launch Mapper -->
+	<include file="$(find global_mapper_ros)/launch/global_mapper_nodelet.launch">
+		<arg name="quad" value="$(arg quad)"/>
+	</include>
+
+
+
+</launch>

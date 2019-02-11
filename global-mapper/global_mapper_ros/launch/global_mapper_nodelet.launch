@@ -1,11 +1,17 @@
 <launch>
+
+  <!-- name of the quad -->
+  <arg name="quad" default="SQ01s"/>
+
   <arg name="load_params" default="true" />
   <arg name="param_file" default="global_mapper.yaml" />
 
   <!-- input topics -->
-  <arg name="pointcloud_topic" default="/flight/r200/points_xyz" />
-  <arg name="pose_topic" default="/pose" />
+  <!--<arg name="pointcloud_topic" default="camera/cloud" />-->
+  <arg name="pose_topic" default="vicon" />
   <arg name="goal_topic" default="/move_base_simple/goal" />
+  <arg name="depth_image_topic" default="depthmap_filter/depth_filt" /> 
+ 
 
   <!-- output topics -->
   <arg name="occupancy_grid_topic" default="~occupancy_grid" />
@@ -20,15 +26,17 @@
 
   <!-- manager -->
   <node if="$(arg standalone)"
+        ns="$(arg quad)"
         pkg="nodelet" type="nodelet" name="$(arg manager)"
         args="manager" output="screen" >
     <!-- params -->
-    <rosparam command="load" if="$(arg load_params)" file="$(find global_mapper)/cfg/$(arg param_file)"/>
+    <rosparam command="load" if="$(arg load_params)" file="$(find global_mapper_ros)/cfg/$(arg param_file)"/>
 
     <!-- input remaps -->
-    <remap from="~pointcloud_topic" to="$(arg pointcloud_topic)" />
+    <!-- <remap from="~pointcloud_topic" to="$(arg pointcloud_topic)" />-->
     <remap from="~pose_topic" to="$(arg pose_topic)" />
     <remap from="~goal_topic" to="$(arg goal_topic)" />
+    <remap from="~depth_image_topic" to="$(arg depth_image_topic)" />
 
     <!-- output remaps -->
     <remap from="~occupancy_grid_topic" to="$(arg occupancy_grid_topic)" />
@@ -39,7 +47,7 @@
   </node>
 
   <!-- nodelet -->
-  <node pkg="nodelet" type="nodelet" name="global_mapper_nodelet"
-        args="load global_mapper/GlobalMapperNodelet $(arg manager)" output="screen">
+  <node ns="$(arg quad)" pkg="nodelet" type="nodelet" name="global_mapper_nodelet"
+        args="load global_mapper_ros/GlobalMapperNodelet $(arg manager)" output="screen">
   </node>
 </launch>
