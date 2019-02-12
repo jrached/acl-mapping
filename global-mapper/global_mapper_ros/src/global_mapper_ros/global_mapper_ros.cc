@@ -190,7 +190,7 @@ void GlobalMapperRos::PopulateUnknownPointCloudMsg(const voxel_grid::VoxelGrid<f
           }
         }
         counter = counter + 1;
-        if (counter % 3 == 0)  // The frontier grid is downsampled to reduce computational cost
+        if (counter % 5 == 0)  // The frontier grid is downsampled to reduce computational cost
         {
           // Also let's populate the bounding box point cloud with unknown and free space
           bool isFrontier = (ixyz[0] == grid_dimensions[0] - 1) || (ixyz[1] == grid_dimensions[1] - 1) ||
@@ -231,11 +231,11 @@ void GlobalMapperRos::PopulateUnknownPointCloudMsg(const voxel_grid::VoxelGrid<f
 
   pcl::toROSMsg(cloud_frontier, *pointcloud_frontier);
   pointcloud_frontier->header.frame_id = "world";
-  pointcloud_frontier->header.stamp = ros::Time::now();
+  pointcloud_frontier->header.stamp = tstampLastPclFused_;
 
   pcl::toROSMsg(cloud, *pointcloud);
   pointcloud->header.frame_id = "world";
-  pointcloud->header.stamp = ros::Time::now();
+  pointcloud->header.stamp = tstampLastPclFused_;
 }
 
 void GlobalMapperRos::PopulateOccupancyPointCloudMsg(const voxel_grid::VoxelGrid<float>& occupancy_grid,

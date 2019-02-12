@@ -52,12 +52,12 @@ void DepthmapFilter::onInit()
 
   // Setup subscriber.
   it_ = std::make_shared<image_transport::ImageTransport>(nh_);
-  rgb_sub_.subscribe(*it_, "rgb", 10);
-  depth_sub_.subscribe(*it_, "depth", 10);
-  info_sub_.subscribe(nh_, "camera_info", 10);
+  rgb_sub_.subscribe(*it_, "rgb", 1);
+  depth_sub_.subscribe(*it_, "depth", 1);
+  info_sub_.subscribe(nh_, "camera_info", 1);
 
   // Set up synchronizer.
-  sync_.reset(new RGBDSynchronizer(RGBDPolicy(10), rgb_sub_, depth_sub_, info_sub_));
+  sync_.reset(new RGBDSynchronizer(RGBDPolicy(1), rgb_sub_, depth_sub_, info_sub_));  // RGBDPolicy(queue_size)
   sync_->registerCallback(boost::bind(&DepthmapFilter::RGBDCallback, this, _1, _2, _3));
 
   // Setup publisher.

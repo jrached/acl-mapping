@@ -6,7 +6,7 @@
   <arg name="load_params" default="true" />
   <arg name="param_file" default="depthmap_filter.yaml" />
 
-  <arg name="manager" default="manager" />
+  <arg name="manager" default="my_manager" />
   <arg name="standalone" default="true" />
 
   <!-- Subscribed topics. -->
@@ -18,13 +18,13 @@
   <arg name="status" default="status" />
   <arg name="event" default="event" />
 
-  <!-- Launch the nodelet manager. -->
+  <!-- Launch the nodelet manager. 
   <node if="$(arg standalone)"
         ns="$(arg quad)" pkg="nodelet" type="nodelet" name="$(arg manager)" output="screen"
-        args="manager"/>
+        args="manager"/> -->
 
   <!-- Launch the DepthmapFilter nodelet.. -->
-  <node ns="$(arg quad)" pkg="nodelet" type="nodelet" name="depthmap_filter"
+  <node ns="$(arg quad)" pkg="nodelet" type="nodelet" name="depthmap_filter_nodelet"
         args="load depthmap_filter/DepthmapFilter
               $(arg manager)">
     <rosparam command="load" if="$(arg load_params)" file="$(find depthmap_filter)/cfg/$(arg param_file)" />

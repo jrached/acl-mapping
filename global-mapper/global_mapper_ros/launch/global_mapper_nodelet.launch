@@ -17,11 +17,12 @@
   <arg name="occupancy_grid_topic" default="~occupancy_grid" />
   <arg name="unknown_grid_topic" default="~unknown_grid" />
   <arg name="distance_grid_topic" default="~distance_grid" />
+  <arg name="frontier_grid_topic" default="~frontier_grid" />
   <arg name="cost_grid_topic" default="~cost_grid" />
   <arg name="path_topic" default="~path" />
   
   <!-- nodelet setup -->
-  <arg name="manager" default="global_mapper" />
+  <arg name="manager" default="my_manager" />
   <arg name="standalone" default="true" />
 
   <!-- manager -->
@@ -41,6 +42,7 @@
     <!-- output remaps -->
     <remap from="~occupancy_grid_topic" to="$(arg occupancy_grid_topic)" />
     <remap from="~unknown_grid_topic" to="$(arg unknown_grid_topic)" />
+    <remap from="~frontier_grid_topic" to="$(arg frontier_grid_topic)" />
     <remap from="~distance_grid_topic" to="$(arg distance_grid_topic)" />
     <remap from="~cost_grid_topic" to="$(arg cost_grid_topic)" />
     <remap from="~path_topic" to="$(arg path_topic)" />
