@@ -35,8 +35,7 @@ private:
   void InitSubscribers();
   void InitPublishers();
   void PopulateUnknownPointCloudMsg(const voxel_grid::VoxelGrid<float>& occupancy_grid,
-                                    sensor_msgs::PointCloud2* pointcloud,
-                                    sensor_msgs::PointCloud2* pointcloud_frontier);
+                                    sensor_msgs::PointCloud2* pointcloud);
   void PopulateOccupancyPointCloudMsg(const voxel_grid::VoxelGrid<float>& occupancy_grid,
                                       sensor_msgs::PointCloud2* pointcloud);
   void PopulateDistancePointCloudMsg(const voxel_grid::VoxelGrid<int>& distance_grid,
