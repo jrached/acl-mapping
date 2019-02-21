@@ -100,7 +100,7 @@ void GlobalMapperRos::InitPublishers()
   if (publish_unknown_grid_)
   {
     unknown_grid_pub_ = pnh_.advertise<sensor_msgs::PointCloud2>("unknown_grid_topic", 1);
-    //frontier_grid_pub_ = pnh_.advertise<sensor_msgs::PointCloud2>("frontier_grid_topic", 1);
+    // frontier_grid_pub_ = pnh_.advertise<sensor_msgs::PointCloud2>("frontier_grid_topic", 1);
   }
 
   if (publish_distance_grid_)
@@ -162,15 +162,15 @@ void GlobalMapperRos::PopulateUnknownPointCloudMsg(const voxel_grid::VoxelGrid<f
   printf("Ra=%f\n", params_.Ra);
   // If you want all the unknown grid, and cropped to be inside the sphere Sa
   pcl::PointCloud<pcl::PointXYZ> cloud;
-  //pcl::PointCloud<pcl::PointXYZ> cloud_frontier;
+  // pcl::PointCloud<pcl::PointXYZ> cloud_frontier;
   double origin[3];
   occupancy_grid.GetOrigin(origin);
   int counter = 0;
-  for (int x = 0; x < grid_dimensions[0]; x++)
+  for (int x = 0; x < grid_dimensions[0]; x = x + 2)
   {
-    for (int y = 0; y < grid_dimensions[1]; y++)
+    for (int y = 0; y < grid_dimensions[1]; y = y + 2)
     {
-      for (int z = 0; z < grid_dimensions[2]; z++)
+      for (int z = 0; z < grid_dimensions[2]; z = z + 2)
       {
         int ixyz[3] = { x, y, z };
         float occupancy_value = occupancy_grid.ReadValue(ixyz);
@@ -181,32 +181,33 @@ void GlobalMapperRos::PopulateUnknownPointCloudMsg(const voxel_grid::VoxelGrid<f
           {
             double dist2_to_map_origin =
                 pow(xyz[0] - origin[0], 2) + pow(xyz[1] - origin[1], 2) + pow(xyz[2] - origin[2], 2);
-            if (dist2_to_map_origin < pow(params_.Ra, 2) && sqrt(dist2_to_map_origin) > 1.1)  // 2 *
-                                                                                              // params_.radius_drone
+            if (dist2_to_map_origin < pow(2 * params_.Ra, 2) &&
+                sqrt(dist2_to_map_origin) > 1.6)  // 2 *
+                                                  // params_.radius_drone
             {
               cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2]));
             }
           }
         }
-/*        counter = counter + 1;
-        if (counter % 5 == 0)  // The frontier grid is downsampled to reduce computational cost
-        {
-          // Also let's populate the bounding box point cloud with unknown and free space
-          bool isFrontier = (ixyz[0] == grid_dimensions[0] - 1) || (ixyz[1] == grid_dimensions[1] - 1) ||
-                            (ixyz[2] == grid_dimensions[2] - 1) || ixyz[0] == 0 || ixyz[1] == 0 || ixyz[2] == 0;
-          bool isUnknown = global_mapper_ptr_->occupancy_grid_.IsUnknown(occupancy_value);
-          bool IsOccupied = global_mapper_ptr_->occupancy_grid_.IsOccupied(occupancy_value);
-          bool isFree = (isUnknown == false) && (IsOccupied == false);
+        /*        counter = counter + 1;
+                if (counter % 5 == 0)  // The frontier grid is downsampled to reduce computational cost
+                {
+                  // Also let's populate the bounding box point cloud with unknown and free space
+                  bool isFrontier = (ixyz[0] == grid_dimensions[0] - 1) || (ixyz[1] == grid_dimensions[1] - 1) ||
+                                    (ixyz[2] == grid_dimensions[2] - 1) || ixyz[0] == 0 || ixyz[1] == 0 || ixyz[2] == 0;
+                  bool isUnknown = global_mapper_ptr_->occupancy_grid_.IsUnknown(occupancy_value);
+                  bool IsOccupied = global_mapper_ptr_->occupancy_grid_.IsOccupied(occupancy_value);
+                  bool isFree = (isUnknown == false) && (IsOccupied == false);
 
-          if (isFrontier && (isFree || isUnknown))
-          {
-            occupancy_grid.GridToWorld(ixyz, xyz);
-            if (xyz[2] > params_.z_ground)  // only publish points above the ground
-            {
-              cloud_frontier.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2]));
-            }
-          }
-        }*/
+                  if (isFrontier && (isFree || isUnknown))
+                  {
+                    occupancy_grid.GridToWorld(ixyz, xyz);
+                    if (xyz[2] > params_.z_ground)  // only publish points above the ground
+                    {
+                      cloud_frontier.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2]));
+                    }
+                  }
+                }*/
       }
     }
   }
@@ -228,9 +229,9 @@ void GlobalMapperRos::PopulateUnknownPointCloudMsg(const voxel_grid::VoxelGrid<f
       }
     }*/
 
-/*  pcl::toROSMsg(cloud_frontier, *pointcloud_frontier);
-  pointcloud_frontier->header.frame_id = "world";
-  pointcloud_frontier->header.stamp = tstampLastPclFused_;*/
+  /*  pcl::toROSMsg(cloud_frontier, *pointcloud_frontier);
+    pointcloud_frontier->header.frame_id = "world";
+    pointcloud_frontier->header.stamp = tstampLastPclFused_;*/
 
   pcl::toROSMsg(cloud, *pointcloud);
   pointcloud->header.frame_id = "world";
@@ -493,12 +494,12 @@ void GlobalMapperRos::Publish(const ros::TimerEvent& event)
   if (publish_unknown_grid_)
   {
     sensor_msgs::PointCloud2 unknown_pointcloud_msg;
-    //sensor_msgs::PointCloud2 frontier_pointcloud_msg;
-    //PopulateUnknownPointCloudMsg(occupancy_grid, &unknown_pointcloud_msg, &frontier_pointcloud_msg);
+    // sensor_msgs::PointCloud2 frontier_pointcloud_msg;
+    // PopulateUnknownPointCloudMsg(occupancy_grid, &unknown_pointcloud_msg, &frontier_pointcloud_msg);
     PopulateUnknownPointCloudMsg(occupancy_grid, &unknown_pointcloud_msg);
 
     unknown_grid_pub_.publish(unknown_pointcloud_msg);
-    //frontier_grid_pub_.publish(frontier_pointcloud_msg);
+    // frontier_grid_pub_.publish(frontier_pointcloud_msg);
   }
 
   if (publish_distance_grid_)
