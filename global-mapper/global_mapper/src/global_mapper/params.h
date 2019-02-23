@@ -17,6 +17,10 @@ struct Params
   double z_ground = 0;
   int skip = 0;
   double depth_max = 10;
+  double r1 = 0.8;
+  double r2 = 8.0;
+  double z_min_unkown = 0.2;
+  double z_max_unkown = 5.0;
 
   // occupancy_grid
   double init_value = 0;

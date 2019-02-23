@@ -58,6 +58,10 @@ void GlobalMapperRos::GetParams()
   fla_utils::SafeGetParam(pnh_, "z_ground", params_.z_ground);
   fla_utils::SafeGetParam(pnh_, "skip", params_.skip);
   fla_utils::SafeGetParam(pnh_, "depth_max", params_.depth_max);
+  fla_utils::SafeGetParam(pnh_, "r1", params_.r1);
+  fla_utils::SafeGetParam(pnh_, "r2", params_.r2);
+  fla_utils::SafeGetParam(pnh_, "z_min_unkown", params_.z_min_unkown);
+  fla_utils::SafeGetParam(pnh_, "z_max_unkown", params_.z_max_unkown);
 
   // occupancy_grid
   fla_utils::SafeGetParam(pnh_, "occupancy_grid/init_value", params_.init_value);
@@ -166,24 +170,24 @@ void GlobalMapperRos::PopulateUnknownPointCloudMsg(const voxel_grid::VoxelGrid<f
   double origin[3];
   occupancy_grid.GetOrigin(origin);
   int counter = 0;
-  for (int x = 0; x < grid_dimensions[0]; x = x + 2)
+  for (int x = 0; x < grid_dimensions[0]; x = x + 1)
   {
-    for (int y = 0; y < grid_dimensions[1]; y = y + 2)
+    for (int y = 0; y < grid_dimensions[1]; y = y + 1)
     {
-      for (int z = 0; z < grid_dimensions[2]; z = z + 2)
+      for (int z = 0; z < grid_dimensions[2]; z = z + 1)
       {
         int ixyz[3] = { x, y, z };
         float occupancy_value = occupancy_grid.ReadValue(ixyz);
         if (global_mapper_ptr_->occupancy_grid_.IsUnknown(occupancy_value))
         {
           occupancy_grid.GridToWorld(ixyz, xyz);
-          if (xyz[2] > params_.z_ground)  // only publish points above the ground
+          if (xyz[2] < params_.z_max_unkown && xyz[2] > params_.z_min_unkown)  // only publish points above the ground
           {
             double dist2_to_map_origin =
                 pow(xyz[0] - origin[0], 2) + pow(xyz[1] - origin[1], 2) + pow(xyz[2] - origin[2], 2);
-            if (dist2_to_map_origin < pow(2 * params_.Ra, 2) &&
-                sqrt(dist2_to_map_origin) > 1.6)  // 2 *
-                                                  // params_.radius_drone
+            if (sqrt(dist2_to_map_origin) < params_.r2 &&
+                sqrt(dist2_to_map_origin) > params_.r1)  // 2 *
+                                                         // params_.radius_drone
             {
               cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2]));
             }
