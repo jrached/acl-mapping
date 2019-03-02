@@ -1,18 +1,19 @@
 <launch>
 
   <!-- name of the quad -->
-  <arg name="quad" default="SQ01s"/>
+  <arg name="quad" default="NQ01"/>
 
   <arg name="load_params" default="true" />
   <arg name="param_file" default="global_mapper.yaml" />
 
   <!-- input topics -->
-  <!--HARDWARE:   camera/depth/image_rect_raw -->z
+  <!--HARDWARE:   camera/depth/image_rect_raw -->
+  <!--HARDWARE filtered:   camera/depth/image_rect_raw -->z
   <!--SIMULATION:  camera/depth/image_raw -->
   <!--SIMULATION filtered:  depthmap_filter/depth_filt -->
-  <arg name="depth_image_topic" default="camera/depth/image_raw" />   
+  <arg name="depth_image_topic" default="camera/depth/image_rect_raw" />   
   <arg name="pose_topic" default="vicon" /> <!--/pose-->
-  <arg name="goal_topic" default="/move_base_simple/goal" />z
+  <arg name="goal_topic" default="/move_base_simple/goal" />
 
   <!-- output topics -->
   <arg name="occupancy_grid_topic" default="~occupancy_grid" />
