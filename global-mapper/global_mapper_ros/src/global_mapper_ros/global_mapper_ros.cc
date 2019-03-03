@@ -600,7 +600,7 @@ void GlobalMapperRos::DepthImageCallback(const sensor_msgs::Image::ConstPtr& ima
       bool finite = std::isfinite(depth);
       bool NaN = (depth != depth);
 
-      if (!finite && depth < 0)
+/*      if (!finite && depth < 0)
       {
         continue;
       }
@@ -622,8 +622,19 @@ void GlobalMapperRos::DepthImageCallback(const sensor_msgs::Image::ConstPtr& ima
       {
         point.z = clear_unknown_distance_;
         point.intensity = depth;
+      }*/
+
+    if (!finite && depth < 0) {
+        continue;
       }
 
+      if (finite) {
+        point.z = depth;
+        point.intensity = 0;
+      } else {
+        point.z = clear_unknown_distance_;
+        point.intensity = depth;
+      }
       point.x = (j - cx) * point.z * x_const;
       point.y = (i - cy) * point.z * y_const;
       cloud.push_back(point);
