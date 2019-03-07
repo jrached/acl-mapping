@@ -163,7 +163,7 @@ void GlobalMapperRos::PopulateUnknownPointCloudMsg(const voxel_grid::VoxelGrid<f
   int grid_dimensions[3];
   occupancy_grid.GetGridDimensions(grid_dimensions);
 
-  printf("Ra=%f\n", params_.Ra);
+  //printf("Ra=%f\n", params_.Ra);
   // If you want all the unknown grid, and cropped to be inside the sphere Sa
   pcl::PointCloud<pcl::PointXYZ> cloud;
   // pcl::PointCloud<pcl::PointXYZ> cloud_frontier;

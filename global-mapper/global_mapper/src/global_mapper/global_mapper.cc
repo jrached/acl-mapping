@@ -169,7 +169,7 @@ void GlobalMapper::UpdateOccupancyGrid()
   // int n = (params_.radius_drone) / (params_.resolution);  // Number of voxels to clear in each side
   // n = (n > 1) ? n : 1;                                    // force n to be at least 1
 
-  int n = 0;
+  int n = 1;
   // clear voxels around vehicle
   int origin_ixyz[3];
   occupancy_grid_.WorldToGrid(origin_, origin_ixyz);
@@ -179,6 +179,7 @@ void GlobalMapper::UpdateOccupancyGrid()
     {
       for (int k = -n; k <= n; k++)
       {
+        //printf("Clearing cell around vehicle!");
         int ixyz[3];
         ixyz[0] = origin_ixyz[0] + i;
         ixyz[1] = origin_ixyz[1] + j;
