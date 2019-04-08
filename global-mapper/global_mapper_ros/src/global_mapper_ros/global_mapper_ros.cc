@@ -170,6 +170,7 @@ void GlobalMapperRos::PopulateUnknownPointCloudMsg(const voxel_grid::VoxelGrid<f
   double origin[3];
   occupancy_grid.GetOrigin(origin);
   int counter = 0;
+  std::cout<<"origin="<<origin[0]<<", "<<origin[1]<<", "<<origin[2]<<std::endl;
   for (int x = 0; x < grid_dimensions[0]; x = x + 1)
   {
     for (int y = 0; y < grid_dimensions[1]; y = y + 1)
@@ -185,6 +186,7 @@ void GlobalMapperRos::PopulateUnknownPointCloudMsg(const voxel_grid::VoxelGrid<f
           {
             double dist2_to_map_origin =
                 pow(xyz[0] - origin[0], 2) + pow(xyz[1] - origin[1], 2) + pow(xyz[2] - origin[2], 2);
+            
             if (sqrt(dist2_to_map_origin) < params_.r2 &&
                 sqrt(dist2_to_map_origin) > params_.r1)  // 2 *
                                                          // params_.radius_drone
