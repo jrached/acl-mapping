@@ -1,6 +1,6 @@
 global_frame: world
 origin: [0.0, 0.0, 0.0]  # [m]
-world_dimensions: [10.0, 10.0, 4.0]  # [m]  60 60 6
+world_dimensions: [16.0, 16.0, 4.0]  # [m]  60 60 6
 resolution: 0.15  # [m]   0.15
 radius_drone: 0.7 # [m] THIS SHOULD BE HIGHER THAN THE RESOLUTION!!
 Ra: 4.0 # [m] radius of the first sphere (Sa) in the planner. The unknown pcloud published will only contain points inside this sphere
