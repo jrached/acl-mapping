@@ -6,7 +6,7 @@ radius_drone: 0.7 # [m] THIS SHOULD BE HIGHER THAN THE RESOLUTION!!
 Ra: 4.0 # [m] radius of the first sphere (Sa) in the planner. The unknown pcloud published will only contain points inside this sphere
 z_ground: 0.13 #[m] points below z_ground are not published in the known grid
 skip: 0  #[pixels] Numbers of pixels to skip in the depth map. Should be >=0
-depth_max: 100 #[m] In the depth image, points farther than depth_max, are treated as inf  
+depth_max: 2 #[m] In the depth image, points farther than depth_max, are treated as inf  
 r1: 0.75 #[m] Points in the sphere centerd in the drone with r>r1 and r<r2 are published as unkown space
 r2: 8.0 #[m] See above
 z_min_unkown: 0.2 #[m] points below z_min_unkown are not published in the unkown grid
@@ -20,7 +20,7 @@ occupancy_grid:
   occupancy_threshold: 0.6  # [0.0, 1.0]
   publish_occupancy_grid: true
   publish_unknown_grid: true
-  clear_unknown_distance: 7.0  # [m]
+  clear_unknown_distance: 3.0  # [m]
 
 distance_grid:
   truncation_distance: 6  # [voxels]

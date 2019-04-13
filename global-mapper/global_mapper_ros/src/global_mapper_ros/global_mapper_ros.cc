@@ -606,7 +606,15 @@ void GlobalMapperRos::DepthImageCallback(const sensor_msgs::Image::ConstPtr& ima
       {
         continue;
       }
-
+       */
+/*      if(finite && depth>params_.depth_max){
+          std::cout<<"depth= "<<depth<<std::endl;
+          point.z = clear_unknown_distance_;
+          point.intensity = nan("");
+          std::cout<<"point.intensity= "<<point.intensity<<std::endl;
+          // continue;
+       }*/
+/*
       if (finite)
       {
         if (depth > params_.depth_max)
@@ -631,8 +639,14 @@ void GlobalMapperRos::DepthImageCallback(const sensor_msgs::Image::ConstPtr& ima
       }
 
       if (finite) {
-        point.z = depth;
-        point.intensity = 0;
+        if(depth>params_.depth_max){ 
+          point.z = depth;
+          point.intensity = nan("");
+        }
+        else{
+          point.z = depth;
+          point.intensity = 0;
+        }
       } else {
         point.z = clear_unknown_distance_;
         point.intensity = depth;
