@@ -18,6 +18,7 @@
 #include <sensor_msgs/Image.h>
 
 #include "acl_msgs/ViconState.h"
+#include <acl_msgs/State.h>
 
 #include "global_mapper/global_mapper.h"
 #include "global_mapper_ros/PlanningGrids.h"
@@ -51,7 +52,7 @@ private:
   // callbacks
   void DepthImageCallback(const sensor_msgs::Image::ConstPtr& image,
                           const sensor_msgs::CameraInfo::ConstPtr& camera_info);
-  void PoseCallback(const acl_msgs::ViconState::ConstPtr& pose_ptr);
+  void PoseCallback(const acl_msgs::State::ConstPtr& pose_ptr);
   void GoalCallback(const geometry_msgs::PoseStamped::ConstPtr& goal_ptr);
 
   // health and status

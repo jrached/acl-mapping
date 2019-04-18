@@ -184,12 +184,12 @@ void GlobalMapperRos::PopulateUnknownPointCloudMsg(const voxel_grid::VoxelGrid<f
           occupancy_grid.GridToWorld(ixyz, xyz);
           if (xyz[2] < params_.z_max_unkown && xyz[2] > params_.z_min_unkown)  // only publish points above the ground
           {
-            double dist2_to_map_origin =
+           double dist2_to_map_origin =
                 pow(xyz[0] - origin[0], 2) + pow(xyz[1] - origin[1], 2) + pow(xyz[2] - origin[2], 2);
             
             if (sqrt(dist2_to_map_origin) < params_.r2 &&
                 sqrt(dist2_to_map_origin) > params_.r1)  // 2 *
-                                                         // params_.radius_drone
+                                                       // params_.radius_drone
             {
               cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2]));
             }
@@ -539,9 +539,9 @@ void GlobalMapperRos::Publish(const ros::TimerEvent& event)
   }
 }
 
-void GlobalMapperRos::PoseCallback(const acl_msgs::ViconState::ConstPtr& pose_ptr)
+void GlobalMapperRos::PoseCallback(const acl_msgs::State::ConstPtr& pose_ptr)
 {
-  double xyz[3] = { pose_ptr->pose.position.x, pose_ptr->pose.position.y, pose_ptr->pose.position.z };
+  double xyz[3] = { pose_ptr->pos.x, pose_ptr->pos.y, pose_ptr->pos.z };
   if (!got_pose_)
   {
     got_pose_ = true;
