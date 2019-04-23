@@ -116,6 +116,8 @@ void GlobalMapper::InsertPointCloud(const PointCloud::ConstPtr& cloud_ptr)
   dim[1] = params_.world_dimensions.data()[1];
   dim[2] = params_.world_dimensions.data()[2];
 
+  auto begin = std::chrono::steady_clock::now();
+
   for (int i = 0; i < cloud_ptr->points.size(); i++)
   {
     // clear
@@ -128,15 +130,24 @@ void GlobalMapper::InsertPointCloud(const PointCloud::ConstPtr& cloud_ptr)
 
     if (NaN)
     {
-      // NaN: clear unknown only
+      // NaN: clear unknown only up to clear_unknown_distance_
       occupancy_grid_.RayTrace(start, end, 0);
     }
     else
     {
       // Inf and valid: clear occupied and unknown
+      // --->Inf: Up to clear_unknown_distance_ (value saved in point.z)
+      // --->Valid: Up to the finite value saved in point.z.
       occupancy_grid_.RayTrace(start, end, params_.miss_inc);
     }
   }
+
+  auto end_time = std::chrono::steady_clock::now();
+  auto diff = end_time - begin;
+  std::cout << "1st loop:  " << std::chrono::duration_cast<std::chrono::milliseconds>(diff).count() << " ms "
+            << std::endl;
+
+  auto begin2 = std::chrono::steady_clock::now();
 
   for (int i = 0; i < cloud_ptr->points.size(); i++)
   {
@@ -149,6 +160,11 @@ void GlobalMapper::InsertPointCloud(const PointCloud::ConstPtr& cloud_ptr)
       occupancy_grid_.UpdateValue(end, params_.hit_inc);
     }
   }
+
+  auto end_time2 = std::chrono::steady_clock::now();
+  auto diff2 = end_time2 - begin2;
+  std::cout << "2nd loop:  " << std::chrono::duration_cast<std::chrono::milliseconds>(diff2).count() << " ms "
+            << std::endl;
 }
 
 void GlobalMapper::GetVoxelGrids(voxel_grid::VoxelGrid<float>* occupancy_grid,
@@ -179,7 +195,7 @@ void GlobalMapper::UpdateOccupancyGrid()
     {
       for (int k = -n; k <= n; k++)
       {
-        //printf("Clearing cell around vehicle!");
+        // printf("Clearing cell around vehicle!");
         int ixyz[3];
         ixyz[0] = origin_ixyz[0] + i;
         ixyz[1] = origin_ixyz[1] + j;
@@ -247,8 +263,6 @@ void GlobalMapper::Spin()
 
   while (true)
   {
-    auto start = std::chrono::steady_clock::now();
-
     std::unique_lock<std::mutex> data_lock(data_mutex_);
     condition_.wait(data_lock, [this] { return data_ready_; });
     data_lock.unlock();
@@ -269,11 +283,6 @@ void GlobalMapper::Spin()
     //  UpdateCostGrid();
     //}
     output_lock.unlock();
-
-    auto end = std::chrono::steady_clock::now();
-    auto diff = end - start;
-    std::cout << "Elapsed time is :  " << std::chrono::duration_cast<std::chrono::milliseconds>(diff).count() << " ms "
-              << std::endl;
   }
 }
 

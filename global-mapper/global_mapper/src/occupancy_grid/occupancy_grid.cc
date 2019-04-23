@@ -145,11 +145,8 @@ void OccupancyGrid::RayTrace(const int start[3], const int end[3], float increme
   {
     err_1 = dy2 - l;
     err_2 = dz2 - l;
-    for (i = 0; i <= l; i++)
+    for (i = 0; i <= l && IsInMap(voxel); i++)
     {
-      if(IsInMap(voxel)==false){
-		break;
-      }
       UpdateValue(voxel, increment);
       if (err_1 > 0)
       {
@@ -170,11 +167,8 @@ void OccupancyGrid::RayTrace(const int start[3], const int end[3], float increme
   {
     err_1 = dx2 - m;
     err_2 = dz2 - m;
-    for (i = 0; i <= m; i++)
+    for (i = 0; i <= m && IsInMap(voxel); i++)
     {
-      if(IsInMap(voxel)==false){
-		break;
-      }
       UpdateValue(voxel, increment);
       if (err_1 > 0)
       {
@@ -195,11 +189,8 @@ void OccupancyGrid::RayTrace(const int start[3], const int end[3], float increme
   {
     err_1 = dy2 - n;
     err_2 = dx2 - n;
-    for (i = 0; i <= n; i++)
+    for (i = 0; i <= n && IsInMap(voxel); i++)
     {
-      if(IsInMap(voxel)==false){
-		break;
-      }
       UpdateValue(voxel, increment);
 
       if (err_1 > 0)

@@ -4,6 +4,7 @@
 #include <memory>
 #include <utility>
 #include <algorithm>
+#include <math.h>
 
 #include <ros/ros.h>
 #include <pcl_ros/transforms.h>
@@ -163,14 +164,14 @@ void GlobalMapperRos::PopulateUnknownPointCloudMsg(const voxel_grid::VoxelGrid<f
   int grid_dimensions[3];
   occupancy_grid.GetGridDimensions(grid_dimensions);
 
-  //printf("Ra=%f\n", params_.Ra);
+  // printf("Ra=%f\n", params_.Ra);
   // If you want all the unknown grid, and cropped to be inside the sphere Sa
   pcl::PointCloud<pcl::PointXYZ> cloud;
   // pcl::PointCloud<pcl::PointXYZ> cloud_frontier;
   double origin[3];
   occupancy_grid.GetOrigin(origin);
   int counter = 0;
-  std::cout<<"origin="<<origin[0]<<", "<<origin[1]<<", "<<origin[2]<<std::endl;
+  std::cout << "origin=" << origin[0] << ", " << origin[1] << ", " << origin[2] << std::endl;
   for (int x = 0; x < grid_dimensions[0]; x = x + 1)
   {
     for (int y = 0; y < grid_dimensions[1]; y = y + 1)
@@ -184,12 +185,12 @@ void GlobalMapperRos::PopulateUnknownPointCloudMsg(const voxel_grid::VoxelGrid<f
           occupancy_grid.GridToWorld(ixyz, xyz);
           if (xyz[2] < params_.z_max_unkown && xyz[2] > params_.z_min_unkown)  // only publish points above the ground
           {
-           double dist2_to_map_origin =
+            double dist2_to_map_origin =
                 pow(xyz[0] - origin[0], 2) + pow(xyz[1] - origin[1], 2) + pow(xyz[2] - origin[2], 2);
-            
+
             if (sqrt(dist2_to_map_origin) < params_.r2 &&
                 sqrt(dist2_to_map_origin) > params_.r1)  // 2 *
-                                                       // params_.radius_drone
+                                                         // params_.radius_drone
             {
               cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2]));
             }
@@ -593,34 +594,79 @@ void GlobalMapperRos::DepthImageCallback(const sensor_msgs::Image::ConstPtr& ima
   float x_const = 1.0 / fx;
   float y_const = 1.0 / fy;
 
+  // std::cout << "Processing DepthImage" << std::endl;
+
+  // Each pixel can have one of these three values: Finite Number, Nan, Inf.
+  // Nan and Inf are NOT finite.
+
+  // TODO: Right now the mapper clears the unkown space when there is a part of the depth image with NaN due to the fact
+  // that there is an object is very near the camera. That's why I've put in the asus_camera.urdf.xacro clip/near=0.06
+  // (instead of clip/near>>0 as it was before). But the problem is that I don't know if there is a way to distinguish
+  // this case from the case when there is a pixel=NaN that is very far from the camera but that the camera hasn't been
+  // able to match it
   for (int i = 0; i < height; i = i + (params_.skip + 1))
   {
     for (int j = 0; j < width; j = j + (params_.skip + 1))
     {
       pcl::PointXYZI point;
       float depth = depthmap(i, j);
-      bool finite = std::isfinite(depth);
-      bool NaN = (depth != depth);
+      bool finite = std::isfinite(depth);  // False for Nan and Inf
+      // bool NaN = (depth != depth);
+      bool NaN = std::isnan(depth);  // True only for finite
 
-/*      if (!finite && depth < 0)
+      // std::cout << "New point, depth=" << depth << std::endl;
+      /*      if (!finite)
+            {
+              std::cout << "Depth is infinite, depth=" << depth << "\n";
+            }
+            if (NaN)
+            {
+              std::cout << "Depth is Nan, depth=" << depth << "\n";
+            }*/
+
+      /*      if (!finite && depth < 0)
+            {
+              continue;
+            }
+             */
+      /*      if(finite && depth>params_.depth_max){
+                std::cout<<"depth= "<<depth<<std::endl;
+                point.z = clear_unknown_distance_;
+                point.intensity = nan("");
+                std::cout<<"point.intensity= "<<point.intensity<<std::endl;
+                // continue;
+             }*/
+      /*
+            if (finite)
+            {
+              if (depth > params_.depth_max)
+              {
+                point.z = clear_unknown_distance_;
+                point.intensity = 1.0 / 0.0;
+              }
+              else
+              {
+                point.z = depth;
+                point.intensity = 0;
+              }
+            }
+            else
+            {
+              point.z = clear_unknown_distance_;
+              point.intensity = depth;
+            }*/
+
+      if (!finite && depth < 0)
       {
         continue;
       }
-       */
-/*      if(finite && depth>params_.depth_max){
-          std::cout<<"depth= "<<depth<<std::endl;
-          point.z = clear_unknown_distance_;
-          point.intensity = nan("");
-          std::cout<<"point.intensity= "<<point.intensity<<std::endl;
-          // continue;
-       }*/
-/*
+
       if (finite)
       {
         if (depth > params_.depth_max)
         {
-          point.z = clear_unknown_distance_;
-          point.intensity = 1.0 / 0.0;
+          point.z = depth;
+          point.intensity = nan("");
         }
         else
         {
@@ -629,25 +675,7 @@ void GlobalMapperRos::DepthImageCallback(const sensor_msgs::Image::ConstPtr& ima
         }
       }
       else
-      {
-        point.z = clear_unknown_distance_;
-        point.intensity = depth;
-      }*/
-
-    if (!finite && depth < 0) {
-        continue;
-      }
-
-      if (finite) {
-        if(depth>params_.depth_max){ 
-          point.z = depth;
-          point.intensity = nan("");
-        }
-        else{
-          point.z = depth;
-          point.intensity = 0;
-        }
-      } else {
+      {  // Nan and Inf
         point.z = clear_unknown_distance_;
         point.intensity = depth;
       }
