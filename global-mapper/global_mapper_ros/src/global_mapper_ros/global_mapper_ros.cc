@@ -124,7 +124,7 @@ void GlobalMapperRos::InitPublishers()
     sparse_path_pub_ = pnh_.advertise<nav_msgs::Path>("sparse_path_topic", 1);
   }
 
-  planning_grids_pub_ = pnh_.advertise<global_mapper_ros::PlanningGrids>("planning_grids", 1);
+  // planning_grids_pub_ = pnh_.advertise<global_mapper_ros::PlanningGrids>("planning_grids", 1);
 
   grid_pub_timer_ = nh_.createTimer(ros::Duration(0.05), &GlobalMapperRos::Publish, this);
 }
@@ -489,7 +489,7 @@ void GlobalMapperRos::Publish(const ros::TimerEvent& event)
 
   global_mapper_ptr_->GetVoxelGrids(&occupancy_grid, &distance_grid, &cost_grid);
 
-  PublishPlanningGrids(occupancy_grid, distance_grid, cost_grid);
+  // PublishPlanningGrids(occupancy_grid, distance_grid, cost_grid);
 
   if (publish_occupancy_grid_)
   {
@@ -613,48 +613,6 @@ void GlobalMapperRos::DepthImageCallback(const sensor_msgs::Image::ConstPtr& ima
       bool finite = std::isfinite(depth);  // False for Nan and Inf
       // bool NaN = (depth != depth);
       bool NaN = std::isnan(depth);  // True only for finite
-
-      // std::cout << "New point, depth=" << depth << std::endl;
-      /*      if (!finite)
-            {
-              std::cout << "Depth is infinite, depth=" << depth << "\n";
-            }
-            if (NaN)
-            {
-              std::cout << "Depth is Nan, depth=" << depth << "\n";
-            }*/
-
-      /*      if (!finite && depth < 0)
-            {
-              continue;
-            }
-             */
-      /*      if(finite && depth>params_.depth_max){
-                std::cout<<"depth= "<<depth<<std::endl;
-                point.z = clear_unknown_distance_;
-                point.intensity = nan("");
-                std::cout<<"point.intensity= "<<point.intensity<<std::endl;
-                // continue;
-             }*/
-      /*
-            if (finite)
-            {
-              if (depth > params_.depth_max)
-              {
-                point.z = clear_unknown_distance_;
-                point.intensity = 1.0 / 0.0;
-              }
-              else
-              {
-                point.z = depth;
-                point.intensity = 0;
-              }
-            }
-            else
-            {
-              point.z = clear_unknown_distance_;
-              point.intensity = depth;
-            }*/
 
       if (!finite && depth < 0)
       {

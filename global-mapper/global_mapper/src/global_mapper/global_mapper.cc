@@ -125,7 +125,7 @@ void GlobalMapper::InsertPointCloud(const PointCloud::ConstPtr& cloud_ptr)
     end[1] = cloud_ptr->points[i].y;
     end[2] = cloud_ptr->points[i].z;
     float intensity = cloud_ptr->points[i].intensity;
-    bool finite = std::isfinite(intensity);
+    // bool finite = std::isfinite(intensity);
     bool NaN = (intensity != intensity);
 
     if (NaN)
