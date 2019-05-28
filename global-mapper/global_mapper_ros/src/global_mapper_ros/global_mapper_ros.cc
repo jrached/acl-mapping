@@ -610,27 +610,32 @@ void GlobalMapperRos::DepthImageCallback(const sensor_msgs::Image::ConstPtr& ima
     {
       pcl::PointXYZI point;
       float depth = depthmap(i, j);
+     // if(depth<0.001){
+     //   depth=std::nan("");
+     //  }
       bool finite = std::isfinite(depth);  // False for Nan and Inf
       // bool NaN = (depth != depth);
-      bool NaN = std::isnan(depth);  // True only for finite
+      bool NaN = (std::isnan(depth));  // True only for finite
 
-      if (!finite && depth < 0)
+    //std::cout<<"I'm Nan= "<<NaN<<std::endl;
+    //std::cout<<"Value= "<<depth<<std::endl;  
+    if (!finite && depth < 0)
       {
         continue;
       }
 
       if (finite)
       {
-        if (depth > params_.depth_max)
-        {
-          point.z = depth;
-          point.intensity = nan("");
-        }
-        else
-        {
+        //if (depth > params_.depth_max)
+        //{
+        //  point.z = depth;
+        //  point.intensity = nan("");
+        //}
+        //else
+        //{
           point.z = depth;
           point.intensity = 0;
-        }
+        //}
       }
       else
       {  // Nan and Inf
