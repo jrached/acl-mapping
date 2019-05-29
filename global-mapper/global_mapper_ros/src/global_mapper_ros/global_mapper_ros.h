@@ -13,6 +13,7 @@
 #include <visualization_msgs/MarkerArray.h>
 #include <nav_msgs/OccupancyGrid.h>
 #include <nav_msgs/Path.h>
+#include <nav_msgs/Odometry.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <image_transport/image_transport.h>
 #include <sensor_msgs/Image.h>
@@ -54,6 +55,7 @@ private:
                           const sensor_msgs::CameraInfo::ConstPtr& camera_info);
   void PoseCallback(const acl_msgs::State::ConstPtr& pose_ptr);
   void GoalCallback(const geometry_msgs::PoseStamped::ConstPtr& goal_ptr);
+  void OdomCallback(const nav_msgs::Odometry::ConstPtr& odom_ptr);
 
   // health and status
   enum ProcessArgs
@@ -85,6 +87,7 @@ private:
   // subscribers
   image_transport::CameraSubscriber depth_sub_;
   ros::Subscriber pose_sub_;
+  ros::Subscriber odom_sub_;
   ros::Subscriber goal_sub_;
 
   // params

@@ -93,6 +93,7 @@ void GlobalMapperRos::InitSubscribers()
   depth_sub_ = it_ptr_->subscribeCamera("depth_image_topic", 1, &GlobalMapperRos::DepthImageCallback, this);
   pose_sub_ = pnh_.subscribe("pose_topic", 1, &GlobalMapperRos::PoseCallback, this);
   goal_sub_ = pnh_.subscribe("goal_topic", 1, &GlobalMapperRos::GoalCallback, this);
+  odom_sub_ = pnh_.subscribe("odom_topic", 1, &GlobalMapperRos::OdomCallback, this);
 }
 
 void GlobalMapperRos::InitPublishers()
@@ -171,7 +172,8 @@ void GlobalMapperRos::PopulateUnknownPointCloudMsg(const voxel_grid::VoxelGrid<f
   double origin[3];
   occupancy_grid.GetOrigin(origin);
   int counter = 0;
-  std::cout << "origin=" << origin[0] << ", " << origin[1] << ", " << origin[2] << std::endl;
+  std::cout << "In PopulateUnknownPointCloudMsg, origin=" << origin[0] << ", " << origin[1] << ", " << origin[2]
+            << std::endl;
   for (int x = 0; x < grid_dimensions[0]; x = x + 1)
   {
     for (int y = 0; y < grid_dimensions[1]; y = y + 1)
@@ -540,6 +542,18 @@ void GlobalMapperRos::Publish(const ros::TimerEvent& event)
   }
 }
 
+// Callback for Odometry (jackal)
+void GlobalMapperRos::OdomCallback(const nav_msgs::Odometry::ConstPtr& odom_ptr)
+{
+  std::cout << "In odom Callback" << std::endl;
+  double xyz[3] = { odom_ptr->pose.pose.position.x, odom_ptr->pose.pose.position.y, odom_ptr->pose.pose.position.z };
+  if (!got_pose_)
+  {
+    got_pose_ = true;
+  }
+  global_mapper_ptr_->UpdateOrigin(xyz);
+}
+
 void GlobalMapperRos::PoseCallback(const acl_msgs::State::ConstPtr& pose_ptr)
 {
   double xyz[3] = { pose_ptr->pos.x, pose_ptr->pos.y, pose_ptr->pos.z };
@@ -563,8 +577,8 @@ void GlobalMapperRos::GoalCallback(const geometry_msgs::PoseStamped::ConstPtr& g
 void GlobalMapperRos::DepthImageCallback(const sensor_msgs::Image::ConstPtr& image_msg,
                                          const sensor_msgs::CameraInfo::ConstPtr& camera_info_msg)
 {
-  // ROS_INFO("Mapper:: DepthImage received, Timestamp=");
-  // std::cout << image_msg->header.stamp << std::endl;
+  ROS_INFO("Mapper:: DepthImage received, Timestamp=");
+  std::cout << image_msg->header.stamp << std::endl;
 
   if (!got_depth_image_)
   {
@@ -610,31 +624,31 @@ void GlobalMapperRos::DepthImageCallback(const sensor_msgs::Image::ConstPtr& ima
     {
       pcl::PointXYZI point;
       float depth = depthmap(i, j);
-     // if(depth<0.001){
-     //   depth=std::nan("");
-     //  }
+      // if(depth<0.001){
+      //   depth=std::nan("");
+      //  }
       bool finite = std::isfinite(depth);  // False for Nan and Inf
       // bool NaN = (depth != depth);
       bool NaN = (std::isnan(depth));  // True only for finite
 
-    //std::cout<<"I'm Nan= "<<NaN<<std::endl;
-    //std::cout<<"Value= "<<depth<<std::endl;  
-    if (!finite && depth < 0)
+      // std::cout<<"I'm Nan= "<<NaN<<std::endl;
+      // std::cout<<"Value= "<<depth<<std::endl;
+      if (!finite && depth < 0)
       {
         continue;
       }
 
       if (finite)
       {
-        //if (depth > params_.depth_max)
+        // if (depth > params_.depth_max)
         //{
         //  point.z = depth;
         //  point.intensity = nan("");
         //}
-        //else
+        // else
         //{
-          point.z = depth;
-          point.intensity = 0;
+        point.z = depth;
+        point.intensity = 0;
         //}
       }
       else

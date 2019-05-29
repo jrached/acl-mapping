@@ -7,11 +7,13 @@
   <arg name="param_file" default="global_mapper.yaml" />
 
   <!-- input topics -->
-  <!--NORMAL:  camera/depth/image_rect_raw -->
-  <!--FILTERED:  depthmap_filter/depth_filt -->
-  <arg name="depth_image_topic" default="camera/depth/image_rect_raw" />   
+  <!--QUAD NORMAL:  camera/depth/image_rect_raw -->
+  <!--QUAD FILTERED:  depthmap_filter/depth_filt -->
+  <!--JACKAL:  /camera/depth/image_rect_raw -->
+  <arg name="depth_image_topic" default="/camera/depth/image_rect_raw" />   
   <arg name="pose_topic" default="state" /> <!--/pose-->
   <arg name="goal_topic" default="/move_base_simple/goal" />
+  <arg name="odom_topic" default="/odometry/filtered" /><!-- used for the Jackal -->
 
   <!-- output topics -->
   <arg name="occupancy_grid_topic" default="~occupancy_grid" />
