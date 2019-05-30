@@ -545,7 +545,7 @@ void GlobalMapperRos::Publish(const ros::TimerEvent& event)
 // Callback for Odometry (jackal)
 void GlobalMapperRos::OdomCallback(const nav_msgs::Odometry::ConstPtr& odom_ptr)
 {
-  std::cout << "In odom Callback" << std::endl;
+  std::cout << "In odom Callback########################" << std::endl;
   double xyz[3] = { odom_ptr->pose.pose.position.x, odom_ptr->pose.pose.position.y, odom_ptr->pose.pose.position.z };
   if (!got_pose_)
   {
