@@ -640,16 +640,16 @@ void GlobalMapperRos::DepthImageCallback(const sensor_msgs::Image::ConstPtr& ima
 
       if (finite)
       {
-        // if (depth > params_.depth_max)
-        //{
-        //  point.z = depth;
-        //  point.intensity = nan("");
-        //}
-        // else
-        //{
+         if (depth > params_.depth_max)
+        {
+          point.z = depth;
+          point.intensity = nan("");
+        }
+         else
+        {
         point.z = depth;
         point.intensity = 0;
-        //}
+        }
       }
       else
       {  // Nan and Inf

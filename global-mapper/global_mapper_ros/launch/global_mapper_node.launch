@@ -12,7 +12,10 @@
   <arg name="depth_image_topic" default="camera/depth/image_rect_raw" />   
   <arg name="pose_topic" default="state" /> <!--/pose-->
   <arg name="goal_topic" default="/move_base_simple/goal" />
-  <arg name="odom_topic" default="odometry/local_filtered" /><!-- used for the Jackal -->
+
+  <!-- used for the Jackal -->
+  <!-- <arg name="odom_topic" default="odometry/local_filtered" /> -->
+  <arg name="odom_topic" default="odometry/filtered" />
 
   <!-- output topics -->
   <arg name="occupancy_grid_topic" default="~occupancy_grid" />
