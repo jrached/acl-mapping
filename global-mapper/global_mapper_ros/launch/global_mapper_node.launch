@@ -15,7 +15,7 @@
 
   <!-- used for the Jackal -->
   <!-- <arg name="odom_topic" default="odometry/local_filtered" /> -->
-  <arg name="odom_topic" default="odometry/filtered" />
+  <arg name="odom_topic" default="odometry/filtered_no" />
 
   <!-- output topics -->
   <arg name="occupancy_grid_topic" default="~occupancy_grid" />
