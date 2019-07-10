@@ -61,8 +61,8 @@ void GlobalMapperRos::GetParams()
   fla_utils::SafeGetParam(pnh_, "depth_max", params_.depth_max);
   fla_utils::SafeGetParam(pnh_, "r1", params_.r1);
   fla_utils::SafeGetParam(pnh_, "r2", params_.r2);
-  fla_utils::SafeGetParam(pnh_, "z_min_unkown", params_.z_min_unkown);
-  fla_utils::SafeGetParam(pnh_, "z_max_unkown", params_.z_max_unkown);
+  fla_utils::SafeGetParam(pnh_, "z_min_unknown", params_.z_min_unknown);
+  fla_utils::SafeGetParam(pnh_, "z_max_unknown", params_.z_max_unknown);
 
   // occupancy_grid
   fla_utils::SafeGetParam(pnh_, "occupancy_grid/init_value", params_.init_value);
@@ -185,7 +185,7 @@ void GlobalMapperRos::PopulateUnknownPointCloudMsg(const voxel_grid::VoxelGrid<f
         if (global_mapper_ptr_->occupancy_grid_.IsUnknown(occupancy_value))
         {
           occupancy_grid.GridToWorld(ixyz, xyz);
-          if (xyz[2] < params_.z_max_unkown && xyz[2] > params_.z_min_unkown)  // only publish points above the ground
+          if (xyz[2] < params_.z_max_unknown && xyz[2] > params_.z_min_unknown)  // only publish points above the ground
           {
             double dist2_to_map_origin =
                 pow(xyz[0] - origin[0], 2) + pow(xyz[1] - origin[1], 2) + pow(xyz[2] - origin[2], 2);
@@ -613,11 +613,11 @@ void GlobalMapperRos::DepthImageCallback(const sensor_msgs::Image::ConstPtr& ima
   // Each pixel can have one of these three values: Finite Number, Nan, Inf.
   // Nan and Inf are NOT finite.
 
-  // TODO: Right now the mapper clears the unkown space when there is a part of the depth image with NaN due to the fact
-  // that there is an object is very near the camera. That's why I've put in the asus_camera.urdf.xacro clip/near=0.06
-  // (instead of clip/near>>0 as it was before). But the problem is that I don't know if there is a way to distinguish
-  // this case from the case when there is a pixel=NaN that is very far from the camera but that the camera hasn't been
-  // able to match it
+  // TODO: Right now the mapper clears the unknown space when there is a part of the depth image with NaN due to the
+  // fact that there is an object is very near the camera. That's why I've put in the asus_camera.urdf.xacro
+  // clip/near=0.06 (instead of clip/near>>0 as it was before). But the problem is that I don't know if there is a way
+  // to distinguish this case from the case when there is a pixel=NaN that is very far from the camera but that the
+  // camera hasn't been able to match it
   for (int i = 0; i < height; i = i + (params_.skip + 1))
   {
     for (int j = 0; j < width; j = j + (params_.skip + 1))
@@ -640,15 +640,15 @@ void GlobalMapperRos::DepthImageCallback(const sensor_msgs::Image::ConstPtr& ima
 
       if (finite)
       {
-         if (depth > params_.depth_max)
+        if (depth > params_.depth_max)
         {
           point.z = depth;
           point.intensity = nan("");
         }
-         else
+        else
         {
-        point.z = depth;
-        point.intensity = 0;
+          point.z = depth;
+          point.intensity = 0;
         }
       }
       else
