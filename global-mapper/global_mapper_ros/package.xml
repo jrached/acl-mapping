@@ -24,7 +24,7 @@
   <depend>cv_bridge</depend>
   <depend>global_mapper</depend>
   <depend>fla_msgs</depend>
-  <depend>acl_msgs</depend>
+  <depend>snapstack_msgs</depend>
 
   <export>
     <nodelet plugin="${prefix}/nodelet_plugins.xml"/>

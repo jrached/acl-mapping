@@ -43,9 +43,8 @@ GlobalMapperRos::GlobalMapperRos()
   it_ptr_ = std::unique_ptr<image_transport::ImageTransport>(new image_transport::ImageTransport(pnh_));
   tf_listener_ptr_ = std::unique_ptr<tf2_ros::TransformListener>(new tf2_ros::TransformListener(tf_buffer_));
   name_drone = ros::this_node::getNamespace();
-  // Erase slashes
-  name_drone.erase(0, 2);
-  std::cout << "**************This is the name of the drone: " << name_drone << std::endl;
+  name_drone.erase(0, 2);  // Erase slashes
+  // std::cout << "The name of the drone is: " << name_drone << std::endl;
 }
 
 void GlobalMapperRos::GetParams()
@@ -554,7 +553,7 @@ void GlobalMapperRos::OdomCallback(const nav_msgs::Odometry::ConstPtr& odom_ptr)
   global_mapper_ptr_->UpdateOrigin(xyz);
 }
 
-void GlobalMapperRos::PoseCallback(const acl_msgs::State::ConstPtr& pose_ptr)
+void GlobalMapperRos::PoseCallback(const snapstack_msgs::State::ConstPtr& pose_ptr)
 {
   double xyz[3] = { pose_ptr->pos.x, pose_ptr->pos.y, pose_ptr->pos.z };
   if (!got_pose_)

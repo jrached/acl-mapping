@@ -32,7 +32,7 @@ set(REQ_CATKIN_PKGS
   image_transport
   cv_bridge
   fla_msgs
-  acl_msgs
+  snapstack_msgs
   )
 find_package(catkin REQUIRED COMPONENTS ${REQ_CATKIN_PKGS})
 
