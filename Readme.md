@@ -6,8 +6,6 @@ Blue is unknown space, and orange is occupied-known space:
 :-------------------------:|:-------------------------:|
 [![IROS 2019: FASTER: Fast and Safe Trajectory Planner for Flights in Unknown Environments](./imgs/uav_sim.gif)](https://www.youtube.com/watch?v=fkkkgomkX10 "IROS 2019: FASTER: Fast and Safe Trajectory Planner for Flights in Unknown Environments")      |  [![IROS 2019: FASTER: Fast and Safe Trajectory Planner for Flights in Unknown Environments](./imgs/gr_sim.gif)](https://youtu.be/L13k44-krcc "IROS 2019: FASTER: Fast and Safe Trajectory Planner for Flights in Unknown Environments") |  
 
-[![IROS 2019: FASTER: Fast and Safe Trajectory Planner for Flights in Unknown Environments](./faster/imgs/gr_sim.gif)](https://youtu.be/L13k44-krcc "IROS 2019: FASTER: Fast and Safe Trajectory Planner for Flights in Unknown Environments")
-
 This mapper has been used in these three papers:
 
 **Efficient Trajectory Planning for High Speed Flight in Unknown Environments**([pdf](https://ieeexplore.ieee.org/abstract/document/8793930), [video](https://www.youtube.com/watch?v=Wic0-xyC_i8))
@@ -48,6 +46,6 @@ This mapper has been used in these three papers:
 `roslaunch global_mapper_ros global_mapper_node.launch`
 
 ## Credits:
-This mapper was developed mainly by Jake Ware and John Carter (Robust Robotics Group, MIT), so all the credit goes to them. 
+This mapper was developed mainly by John Ware and John Carter (Robust Robotics Group, MIT), so all the credit goes to them. 
 
 Jesus Tordesillas (ACL-MIT) did some minor modifications afterwards (in the branch `dev`)
