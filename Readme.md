@@ -8,7 +8,7 @@ Blue is unknown space, and orange is occupied-known space:
 
 This mapper has been used in these three papers:
 
-**Efficient Trajectory Planning for High Speed Flight in Unknown Environments**([pdf](https://ieeexplore.ieee.org/abstract/document/8793930), [video](https://www.youtube.com/watch?v=Wic0-xyC_i8))
+**Efficient Trajectory Planning for High Speed Flight in Unknown Environments** (ICRA 2019) ([pdf](https://ieeexplore.ieee.org/abstract/document/8793930), [video](https://www.youtube.com/watch?v=Wic0-xyC_i8))
 ```
 @inproceedings{ryll2019efficient,
   title={Efficient Trajectory Planning for High Speed Flight in Unknown Environments},
