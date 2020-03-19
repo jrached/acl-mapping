@@ -20,7 +20,8 @@ This mapper has been used in these three papers:
 }
 ```
 
-**FASTER: Fast and Safe Trajectory Planner for Flights in Unknown Environments** (IROS 2019)([pdf](https://arxiv.org/abs/1903.03558), [video](https://www.youtube.com/watch?v=gwV0YRs5IWs))
+**FASTER: Fast and Safe Trajectory Planner for Flights in Unknown Environments** (IROS 2019) ([conference paper](https://arxiv.org/abs/1903.03558), [journal paper](https://arxiv.org/abs/2001.04420), [video](https://www.youtube.com/watch?v=gwV0YRs5IWs))
+
 ```bibtex
 @inproceedings{tordesillas2019faster,
   title={{FASTER}: Fast and Safe Trajectory Planner for Flights in Unknown Environments},
