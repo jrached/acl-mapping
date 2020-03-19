@@ -2,7 +2,7 @@
 
 Blue is unknown space, and orange is occupied-known space:
 
-UAV               |  Ground Robot           | 
+**UAV**               |  **Ground Robot**          | 
 :-------------------------:|:-------------------------:|
 [![IROS 2019: FASTER: Fast and Safe Trajectory Planner for Flights in Unknown Environments](./imgs/uav_sim.gif)](https://www.youtube.com/watch?v=fkkkgomkX10 "IROS 2019: FASTER: Fast and Safe Trajectory Planner for Flights in Unknown Environments")      |  [![IROS 2019: FASTER: Fast and Safe Trajectory Planner for Flights in Unknown Environments](./imgs/gr_sim.gif)](https://youtu.be/L13k44-krcc "IROS 2019: FASTER: Fast and Safe Trajectory Planner for Flights in Unknown Environments") |  
 
@@ -48,6 +48,6 @@ This mapper has been used in these three papers:
 `roslaunch global_mapper_ros global_mapper_node.launch`
 
 ## Credits:
-This mapping stack was developed mainly by Jake Ware and John Carter (Robust Robotics Group, MIT), so all the credit goes to them. 
+This mapper was developed mainly by Jake Ware and John Carter (Robust Robotics Group, MIT), so all the credit goes to them. 
 
 Jesus Tordesillas (ACL-MIT) did some minor modifications afterwards (in the branch `dev`)
