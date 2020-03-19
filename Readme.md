@@ -9,7 +9,7 @@ Blue is unknown space, and orange is occupied-known space:
 This mapper has been used in these three papers:
 
 **Efficient Trajectory Planning for High Speed Flight in Unknown Environments** (ICRA 2019) ([pdf](https://ieeexplore.ieee.org/abstract/document/8793930), [video](https://www.youtube.com/watch?v=Wic0-xyC_i8))
-```
+```bibtex
 @inproceedings{ryll2019efficient,
   title={Efficient Trajectory Planning for High Speed Flight in Unknown Environments},
   author={Ryll, Markus and Ware, John and Carter, John and Roy, Nick},
@@ -21,7 +21,7 @@ This mapper has been used in these three papers:
 ```
 
 **FASTER: Fast and Safe Trajectory Planner for Flights in Unknown Environments** (IROS 2019)([pdf](https://arxiv.org/abs/1903.03558), [video](https://www.youtube.com/watch?v=gwV0YRs5IWs))
-```
+```bibtex
 @inproceedings{tordesillas2019faster,
   title={{FASTER}: Fast and Safe Trajectory Planner for Flights in Unknown Environments},
   author={Tordesillas, Jesus and Lopez, Brett T and How, Jonathan P},
@@ -33,7 +33,7 @@ This mapper has been used in these three papers:
 ```
 
 **Real-Time Planning with Multi-Fidelity Models for Agile Flights in Unknown Environments** (ICRA 2019) ([pdf](https://arxiv.org/abs/1810.01035), [video](https://www.youtube.com/watch?v=E4V2_B8x-UI))
-```
+```bibtex
 @article{tordesillas2018real,
   title={Real-Time Planning with Multi-Fidelity Models for Agile Flights in Unknown Environments},
   author={Tordesillas, Jesus and Lopez, Brett T and Carter, John and Ware, John and How, Jonathan P},
