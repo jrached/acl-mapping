@@ -43,7 +43,8 @@ GlobalMapperRos::GlobalMapperRos()
   it_ptr_ = std::unique_ptr<image_transport::ImageTransport>(new image_transport::ImageTransport(pnh_));
   tf_listener_ptr_ = std::unique_ptr<tf2_ros::TransformListener>(new tf2_ros::TransformListener(tf_buffer_));
   name_drone = ros::this_node::getNamespace();
-  name_drone.erase(0, 2);  // Erase slashes
+  name_drone.erase(std::remove(name_drone.begin(), name_drone.end(), '/'), name_drone.end());  // remove slashes
+
   // std::cout << "The name of the drone is: " << name_drone << std::endl;
 }
 
