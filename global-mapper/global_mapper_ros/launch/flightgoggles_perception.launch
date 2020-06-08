@@ -34,7 +34,7 @@
     <!-- Would be nice to run in nodelet but that seems broken -->
     <node pkg="global_mapper_ros" type="global_mapper_node" name="global_mapper_ros" output="screen">
       <!-- params -->
-      <rosparam command="load" file="$(find global_mapper_ros)/cfg/global_mapper.yaml"/>
+      <rosparam command="load" file="$(find global_mapper_ros)/cfg/flightgoggles.yaml"/>
 
       <!-- input remaps -->
       <remap from="~depth_image_topic" to="camera/depth_image" />
