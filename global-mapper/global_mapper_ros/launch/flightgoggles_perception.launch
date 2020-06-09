@@ -1,5 +1,8 @@
 <launch>
-  <arg name="uav_name" default="uav"/>
+  <arg name="veh" default="$(optenv VEHTYPE SQ)" />
+  <arg name="num" default="$(optenv VEHNUM 01)" />
+  <arg name="uav_name" default="$(arg veh)$(arg num)"/>
+
   <arg name="use_state_estimate" default="false"/>
 
   <!-- Stereo processing nodelet -->
@@ -19,11 +22,9 @@
         <remap from="right/image_rect" to="right/image_rect_color" />
       </node>
 
-      <!--
-        <node name="stereo_image_proc_cloud" pkg="nodelet" type="nodelet"
-            args="load stereo_image_proc/point_cloud2 $(arg manager_fullname)" output="screen">
-        </node>
-      -->
+      <node name="stereo_image_proc_cloud" pkg="nodelet" type="nodelet"
+          args="load stereo_image_proc/point_cloud2 $(arg manager_fullname)" output="screen">
+      </node>
 
       <!-- Uses non-standard disparity_image_proc package to produce depth image -->
       <node name="stereo_image_proc_depth" pkg="nodelet" type="nodelet"
@@ -32,7 +33,7 @@
     </group>
 
     <!-- Would be nice to run in nodelet but that seems broken -->
-    <node pkg="global_mapper_ros" type="global_mapper_node" name="global_mapper_ros" output="screen">
+    <node pkg="global_mapper_ros" type="global_mapper_node" name="global_mapper_ros" output="log">
       <!-- params -->
       <rosparam command="load" file="$(find global_mapper_ros)/cfg/flightgoggles.yaml"/>
 
@@ -41,8 +42,8 @@
       <remap from="~goal_topic" to="/move_base_simple/goal" />
       <remap from="~pose_topic" to="state" />
       <remap from="camera/camera_info" to="camera/left/camera_info"/>
-      <remap from="occupancy_grid_topic" to="occupancy_grid"/>
-      <remap from="unknown_grid_topic" to="unknown_grid"/>
+      <remap from="~occupancy_grid_topic" to="occupancy_grid"/>
+      <remap from="~unknown_grid_topic" to="unknown_grid"/>
     </node>
   </group>
 
