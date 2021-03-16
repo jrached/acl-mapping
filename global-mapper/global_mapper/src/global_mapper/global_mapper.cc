@@ -144,8 +144,8 @@ void GlobalMapper::InsertPointCloud(const PointCloud::ConstPtr& cloud_ptr)
 
   auto end_time = std::chrono::steady_clock::now();
   auto diff = end_time - begin;
-  std::cout << "1st loop:  " << std::chrono::duration_cast<std::chrono::milliseconds>(diff).count() << " ms "
-            << std::endl;
+  // std::cout << "1st loop:  " << std::chrono::duration_cast<std::chrono::milliseconds>(diff).count() << " ms "
+  //           << std::endl;
 
   auto begin2 = std::chrono::steady_clock::now();
 
@@ -163,8 +163,8 @@ void GlobalMapper::InsertPointCloud(const PointCloud::ConstPtr& cloud_ptr)
 
   auto end_time2 = std::chrono::steady_clock::now();
   auto diff2 = end_time2 - begin2;
-  std::cout << "2nd loop:  " << std::chrono::duration_cast<std::chrono::milliseconds>(diff2).count() << " ms "
-            << std::endl;
+  // std::cout << "2nd loop:  " << std::chrono::duration_cast<std::chrono::milliseconds>(diff2).count() << " ms "
+  //           << std::endl;
 }
 
 void GlobalMapper::GetVoxelGrids(voxel_grid::VoxelGrid<float>* occupancy_grid,

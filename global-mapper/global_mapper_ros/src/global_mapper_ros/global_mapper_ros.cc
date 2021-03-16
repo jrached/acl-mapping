@@ -172,8 +172,8 @@ void GlobalMapperRos::PopulateUnknownPointCloudMsg(const voxel_grid::VoxelGrid<f
   double origin[3];
   occupancy_grid.GetOrigin(origin);
   int counter = 0;
-  std::cout << "In PopulateUnknownPointCloudMsg, origin=" << origin[0] << ", " << origin[1] << ", " << origin[2]
-            << std::endl;
+  // std::cout << "In PopulateUnknownPointCloudMsg, origin=" << origin[0] << ", " << origin[1] << ", " << origin[2]
+  //           << std::endl;
   for (int x = 0; x < grid_dimensions[0]; x = x + 1)
   {
     for (int y = 0; y < grid_dimensions[1]; y = y + 1)
@@ -577,8 +577,8 @@ void GlobalMapperRos::GoalCallback(const geometry_msgs::PoseStamped::ConstPtr& g
 void GlobalMapperRos::DepthImageCallback(const sensor_msgs::Image::ConstPtr& image_msg,
                                          const sensor_msgs::CameraInfo::ConstPtr& camera_info_msg)
 {
-  ROS_INFO("Mapper:: DepthImage received, Timestamp=");
-  std::cout << image_msg->header.stamp << std::endl;
+  ROS_INFO("Mapper:: DepthImage received");
+  // std::cout << image_msg->header.stamp << std::endl;
 
   if (!got_depth_image_)
   {
