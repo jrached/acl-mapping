@@ -1,9 +1,0 @@
-<library path="lib/libdepthmap_filter">
-  <class name="depthmap_filter/DepthmapFilter"
-         type="depthmap_filter::DepthmapFilter"
-         base_class_type="nodelet::Nodelet">
-    <description>
-      Filters a depthmap.
-    </description>
-  </class>
-</library>

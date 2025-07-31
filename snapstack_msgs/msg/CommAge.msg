@@ -1,0 +1,3 @@
+std_msgs/Header header
+float32 vicon_age_secs
+float32 goal_age_secs

@@ -4,24 +4,26 @@
 #include <thread>
 #include <mutex>
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
-#include "fla_msgs/ProcessStatus.h"
+#include "fla_interfaces/msg/process_status.hpp"
 
 namespace fla_utils {
 
-class ProcessStatus {
+class ProcessStatus : public rclcpp::Node {
  public:
   ProcessStatus(const uint8_t id, const double rate)
-    : id_(id),
+    : Node("process_status"),
+      id_(id),
       publish_rate_(rate),
       arg_(0),
       status_(0) {
-    ros::NodeHandle nh;
     SetArg(0);
     SetStatus(0);
     status_thread_ = std::thread(&ProcessStatus::Heartbeat, this);
-    status_pub_ = nh.advertise<fla_msgs::ProcessStatus>("/globalstatus", 0);
+    
+    status_pub_ = this->create_publisher<fla_interfaces::msg:ProcessStatus>("/globalstatus", 0);
+    status_pub_->publish<fla_interfaces::msg:ProcessStatus>("/globalstatus", 0);
   }
 
   void SetArg(uint8_t arg) {
@@ -36,8 +38,8 @@ class ProcessStatus {
 
 private:
   void Heartbeat() {
-    while (ros::ok()) {
-      fla_msgs::ProcessStatus ps;
+    while (rclcpp::ok()) {
+      fla_interfaces::msg::ProcessStatus ps;
       ps.id = id_;
       ps.pid = getpid();
 
@@ -55,11 +57,12 @@ private:
   }
 
   std::mutex mutex_;
-  ros::Rate publish_rate_;
+  rclcpp::Rate publish_rate_;
   std::thread status_thread_;
   uint8_t id_;
   uint8_t status_;
   uint8_t arg_;
-  ros::Publisher status_pub_;
+  // ros::Publisher status_pub_;
+  rclcpp::Publisher<fla_interfaces::msg:ProcessStatus>SharedPtr status_pub_;
 };
 }  // namespace fla_utils
