@@ -77,11 +77,6 @@ LaserScanToPointCloud::LaserScanToPointCloud() : rclcpp::Node("lasercan_to_point
 
   // start interfaces
   
-  // pub_cloud2_ = nh_.advertise<sensor_msgs::PointCloud2>("cloud2_out", 1);
-  // pub_status_ = nh_.advertise<fla_msgs::ProcessStatus>("/globalstatus", 1);
-  // sub_scan_   = nh_.subscribe("scan_in", 1, &LaserScanToPointCloud::scan_handler, this);
-  // heartbeat_timer_ = nh_.createTimer(ros::Duration(0.05), &LaserScanToPointCloud::heartbeat_callback, this);
-  
   // Publishers and Subscribers
   pub_cloud2_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("cloud2_out", 1);
   pub_status_ = this->create_publisher<fla_interfaces::msg::ProcessStatus>("/globalstatus", 1);

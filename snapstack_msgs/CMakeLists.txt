@@ -27,6 +27,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/State.msg"
   "msg/TimeFilter.msg"
   "msg/VioFilterState.msg"
+  "msg/PlanningGrids.msg"
   DEPENDENCIES std_msgs nav_msgs std_srvs builtin_interfaces geometry_msgs 
  )
 

@@ -19,8 +19,13 @@
   <depend>std_srvs</depend>
   <depend>std_msgs</depend>
   <depend>builtin_interfaces</depend>
-  <depend>actionlib_msgs</depend> <!-- dont think this is necessary -->
+  <!-- <depend>actionlib_msgs</depend> dont think this is necessary -->
+  
+  <build_depend>rosidl_typesupport_c</build_depend>
+  <exec_depend>rosidl_typesupport_c</exec_depend>
 
+  <build_depend>rosidl_typesupport_cpp</build_depend>
+  <exec_depend>rosidl_typesupport_cpp</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

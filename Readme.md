@@ -43,6 +43,16 @@ If you find the code of this mapper helpful, please consider citing these papers
 }
 ```
 
+## Compile for ROS2:
+```bash
+colcon build \
+  --cmake-args \
+    -DCMAKE_C_COMPILER=/usr/bin/gcc \
+    -DCMAKE_CXX_COMPILER=/usr/bin/g++ \
+    -DCMAKE_INSTALL_PREFIX=$PWD/install \
+  --merge-install
+```
+
 ## Commands:
 `roslaunch global_mapper_ros global_mapper_node.launch`
 
