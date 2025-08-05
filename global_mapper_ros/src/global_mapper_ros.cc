@@ -490,44 +490,6 @@ namespace global_mapper_ros
     }
   }
 
-  void GlobalMapperRos::PublishPlanningGrids(const voxel_grid::VoxelGrid<float> &occupancy_grid,
-                                             const voxel_grid::VoxelGrid<int> &distance_grid,
-                                             const voxel_grid::VoxelGrid<int> &cost_grid)
-  {
-    double origin[3];
-    int grid_dimensions[3];
-    occupancy_grid.GetOrigin(origin);
-    occupancy_grid.GetGridDimensions(grid_dimensions);
-
-    // chat generated alternative for creating the message
-    auto planning_grids_msg = std::make_shared<snapstack_msgs::msg::PlanningGrids>();
-    planning_grids_msg->header.stamp = this->now();
-    planning_grids_msg->header.frame_id = params_.global_frame;
-    double projected_goal[3];
-    if (!global_mapper_ptr_->GetProjectedGoal(&projected_goal[0]))
-    {
-      RCLCPP_WARN(this->get_logger(), "Failed to get projected goal");
-      return;
-    }
-    planning_grids_msg->projected_goal[0] = projected_goal[0];
-    planning_grids_msg->projected_goal[1] = projected_goal[1];
-    planning_grids_msg->projected_goal[2] = projected_goal[2];
-    planning_grids_msg->origin[0] = origin[0];
-    planning_grids_msg->origin[1] = origin[1];
-    planning_grids_msg->origin[2] = origin[2];
-    planning_grids_msg->grid_dimensions[0] = grid_dimensions[0];
-    planning_grids_msg->grid_dimensions[1] = grid_dimensions[1];
-    planning_grids_msg->grid_dimensions[2] = grid_dimensions[2];
-    planning_grids_msg->resolution = occupancy_grid.GetResolution();
-    planning_grids_msg->occupancy_data = occupancy_grid.GetData();
-    planning_grids_msg->distance_data = distance_grid.GetData();
-    planning_grids_msg->cost_data = cost_grid.GetData();
-    planning_grids_msg->dmax = global_mapper_ptr_->distance_grid_.GetMaxSquaredDistance();
-    planning_grids_msg->occupied_threshold = global_mapper_ptr_->occupancy_grid_.GetThreshold();
-
-    planning_grids_pub_->publish(*planning_grids_msg);
-  }
-
   // might be good to add more debug warnings, e.g dense and sparse paths are emtpy
   void GlobalMapperRos::Publish()
   {
@@ -537,8 +499,6 @@ namespace global_mapper_ros
     voxel_grid::VoxelGrid<int> cost_grid;
 
     global_mapper_ptr_->GetVoxelGrids(&occupancy_grid, &distance_grid, &cost_grid);
-
-    // PublishPlanningGrids(occupancy_grid, distance_grid, cost_grid);
 
     if (publish_occupancy_grid_)
     {

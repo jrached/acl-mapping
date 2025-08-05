@@ -36,8 +36,6 @@
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
-#include <snapstack_msgs/msg/planning_grids.hpp>
-#include <snapstack_msgs/msg/state.hpp>
 #include <dynus_interfaces/msg/state.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
@@ -75,10 +73,6 @@ private:
   void PopulatePathMsg(const std::vector<std::array<double, 3>>& path, nav_msgs::msg::Path* path_msg);
   void Publish();
 
-  void PublishPlanningGrids(const voxel_grid::VoxelGrid<float>& occupancy_grid,
-                            const voxel_grid::VoxelGrid<int>& distance_grid,
-                            const voxel_grid::VoxelGrid<int>& cost_grid);
-
   // callbacks
   void PointCloudCallback(const sensor_msgs::msg::PointCloud2::ConstSharedPtr & cloud_msg);
   void PoseCallback(const dynus_interfaces::msg::State::SharedPtr pose_ptr);
@@ -106,7 +100,6 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cost_grid_pub_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_pub_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr sparse_path_pub_;
-  rclcpp::Publisher<snapstack_msgs::msg::PlanningGrids>::SharedPtr planning_grids_pub_;
 
   // time (in secs) of the last point cloud fused in this map
   rclcpp::Time tstampLastPclFused_;

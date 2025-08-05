@@ -38,7 +38,6 @@ find_package(visualization_msgs       REQUIRED)
 find_package(image_transport          REQUIRED)
 find_package(cv_bridge                REQUIRED)
 find_package(fla_interfaces           REQUIRED)
-find_package(snapstack_msgs           REQUIRED)
 find_package(dynus_interfaces           REQUIRED)
 find_package(builtin_interfaces       REQUIRED)
 find_package(Eigen3                   REQUIRED)
@@ -89,7 +88,6 @@ ament_target_dependencies(global_mapper_node
   image_transport
   cv_bridge
   fla_interfaces
-  snapstack_msgs
   dynus_interfaces
   builtin_interfaces
   Eigen3
