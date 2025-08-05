@@ -13,7 +13,7 @@ def generate_launch_description():
     quad                   = LaunchConfiguration('quad')
     load_params            = LaunchConfiguration('load_params')
     param_file             = LaunchConfiguration('param_file')
-    depth_image_topic      = LaunchConfiguration('depth_image_topic')
+    depth_pointcloud_topic      = LaunchConfiguration('depth_pointcloud_topic')
     pose_topic             = LaunchConfiguration('pose_topic')
     goal_topic             = LaunchConfiguration('goal_topic')
     odom_topic             = LaunchConfiguration('odom_topic')
@@ -37,7 +37,8 @@ def generate_launch_description():
         DeclareLaunchArgument('quad',                 default_value='NX01',                        description='name of the quad / ros namespace'),
         DeclareLaunchArgument('load_params',          default_value='true',                        description='whether to load the YAML params'),
         DeclareLaunchArgument('param_file',           default_value='global_mapper.yaml',           description='name of your params file (in cfg/)'),
-        DeclareLaunchArgument('depth_image_topic',    default_value='camera/depth/image_rect_raw', description='input depth image topic'),
+        DeclareLaunchArgument('depth_pointcloud_topic', default_value='mid360_PointCloud2',  description='input pointcloud topic'),
+        # DeclareLaunchArgument('depth_pointcloud_topic', default_value='d435/depth/color/points',  description='input pointcloud topic'),
         DeclareLaunchArgument('pose_topic',           default_value='state',                        description='input pose topic'),
         DeclareLaunchArgument('goal_topic',           default_value='/move_base_simple/goal',       description='input goal topic'),
         DeclareLaunchArgument('odom_topic',           default_value='odometry/filtered_no',         description='input odometry topic'),
@@ -60,7 +61,7 @@ def generate_launch_description():
             # only load params if you really want—here we always load
             parameters=[param_file_path],
             remappings=[
-                ('depth_image_topic',    depth_image_topic),
+                ('depth_pointcloud_topic',    depth_pointcloud_topic),
                 ('pose_topic',           pose_topic),
                 ('goal_topic',           goal_topic),
                 ('odom_topic',           odom_topic),
@@ -72,6 +73,6 @@ def generate_launch_description():
                 ('path_topic',           path_topic),
                 ('sparse_path_topic',    sparse_path_topic),
             ],
-            prefix='xterm -e gdb -q -ex run --args', # gdb debugging
+            # prefix='xterm -e gdb -q -ex run --args', # gdb debugging
         ),
     ])

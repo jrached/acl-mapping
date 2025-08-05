@@ -13,7 +13,6 @@ struct Params
   std::vector<double> world_dimensions = { 5.0, 5.0, 1.0 };
   double resolution = 1.0;
   double radius_drone = 0.15;
-  double Ra = 4.0;
   double z_ground = 0;
   int skip = 0;
   double depth_max = 10;

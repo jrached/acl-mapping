@@ -82,33 +82,24 @@ bool OccupancyGrid::IsOccupied(const int ind) const
 
 void OccupancyGrid::UpdateValue(const int ind, float delta)
 {
-  float value = ReadValue(ind);
-  if (value < 0)
-  {
-    // Clear unknown. Don't increment if value < 0, just set to 0.
-    WriteValue(ind, 0);
-    value = 0;
+  float old_value = ReadValue(ind);
+
+  if (old_value < 0) {
+    WriteValue(ind, 0.0f);
+    old_value = 0.0f;
   }
 
-  // Update value.
-  bool occupied_before = IsOccupied(ind);
-  float new_value = clamp_value(value + delta, 0.0f, 1.0f);
+  bool occupied_before = (old_value > threshold_);
+  float new_value = clamp_value(old_value + delta, 0.0f, 1.0f);
   WriteValue(ind, new_value);
-  bool occupied_after = IsOccupied(ind);
 
-  double xyz[3];
-  if (!occupied_before && occupied_after)
-  {
-    IndexToWorld(ind, xyz);
-    marked_list_.push_back({ xyz[0], xyz[1], xyz[2] });
+  bool occupied_after = (new_value > threshold_);
+  if (!occupied_before && occupied_after) {
   }
-
-  if (occupied_before && !occupied_after)
-  {
-    IndexToWorld(ind, xyz);
-    cleared_list_.push_back({ xyz[0], xyz[1], xyz[2] });
+  if (occupied_before && !occupied_after) {
   }
 }
+
 
 void OccupancyGrid::RayTrace(const int start[3], const int end[3], float increment)
 {

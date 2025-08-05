@@ -25,21 +25,20 @@ namespace global_mapper_ros
     this->declare_parameter<std::vector<double>>("origin", {0.0, 0.0, 0.0});
     this->declare_parameter<std::vector<double>>("world_dimensions", {20.0, 20.0, 4.0});
     this->declare_parameter<double>("resolution", 0.15);
-    this->declare_parameter<double>("radius_drone", 1.0);
-    this->declare_parameter<double>("Ra", 4.0);
+    this->declare_parameter<double>("radius_drone", 0.1);
     this->declare_parameter<double>("z_ground", 0.1);
     this->declare_parameter<int>("skip", 0);
-    this->declare_parameter<double>("depth_max", 5.0);
+    this->declare_parameter<double>("depth_max", 8.0);
     this->declare_parameter<double>("r1", 0.8);
     this->declare_parameter<double>("r2", 8.0);
     this->declare_parameter<double>("z_min_unknown", 0.1);
     this->declare_parameter<double>("z_max_unknown", 5.0);
 
     // namespaced ones:
-    this->declare_parameter<double>("occupancy_grid.init_value", -1.0);
-    this->declare_parameter<double>("occupancy_grid.hit_inc", 0.4);
-    this->declare_parameter<double>("occupancy_grid.miss_inc", -0.01);
-    this->declare_parameter<double>("occupancy_grid.occupancy_threshold", 0.6);
+    this->declare_parameter<double>("occupancy_grid.init_value", 0.0);
+    this->declare_parameter<double>("occupancy_grid.hit_inc", 1.0);
+    this->declare_parameter<double>("occupancy_grid.miss_inc", 0.0);
+    this->declare_parameter<double>("occupancy_grid.occupancy_threshold", 0.2);
     this->declare_parameter<bool>("occupancy_grid.publish_occupancy_grid", true);
     this->declare_parameter<bool>("occupancy_grid.publish_unknown_grid", true);
     this->declare_parameter<double>("occupancy_grid.clear_unknown_distance", 5.0);
@@ -61,7 +60,6 @@ namespace global_mapper_ros
     fla_utils::SafeGetParam(*this, "world_dimensions", params_.world_dimensions);
     fla_utils::SafeGetParam(*this, "resolution", params_.resolution);
     fla_utils::SafeGetParam(*this, "radius_drone", params_.radius_drone);
-    fla_utils::SafeGetParam(*this, "Ra", params_.Ra);
     fla_utils::SafeGetParam(*this, "z_ground", params_.z_ground);
     fla_utils::SafeGetParam(*this, "skip", params_.skip);
     fla_utils::SafeGetParam(*this, "depth_max", params_.depth_max);
@@ -100,7 +98,6 @@ namespace global_mapper_ros
     RCLCPP_INFO(this->get_logger(), "  world_dimensions: [%f, %f, %f]", params_.world_dimensions[0], params_.world_dimensions[1], params_.world_dimensions[2]);
     RCLCPP_INFO(this->get_logger(), "  resolution: %f", params_.resolution);
     RCLCPP_INFO(this->get_logger(), "  radius_drone: %f", params_.radius_drone);
-    RCLCPP_INFO(this->get_logger(), "  Ra: %f", params_.Ra);
     RCLCPP_INFO(this->get_logger(), "  z_ground: %f", params_.z_ground);
     RCLCPP_INFO(this->get_logger(), "  skip: %d", params_.skip);
     RCLCPP_INFO(this->get_logger(), "  depth_max: %f", params_.depth_max);
@@ -125,13 +122,12 @@ namespace global_mapper_ros
     RCLCPP_INFO(this->get_logger(), "  cost_grid.unknown_weight: %d", params_.unknown_weight);
     RCLCPP_INFO(this->get_logger(), "  cost_grid.obstacle_weight: %d", params_.obstacle_weight);
     RCLCPP_INFO(this->get_logger(), "  cost_grid.target_altitude: %f", target_altitude_);
-
   }
 
   void GlobalMapperRos::InitSubscribers()
   {
-    pose_sub_ = this->create_subscription<snapstack_msgs::msg::State>("pose_topic", 1, std::bind(&GlobalMapperRos::PoseCallback, this, std::placeholders::_1));
-    odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>("odom_topic", 1, std::bind(&GlobalMapperRos::OdomCallback, this, std::placeholders::_1));
+    pose_sub_ = this->create_subscription<dynus_interfaces::msg::State>("pose_topic", 1, std::bind(&GlobalMapperRos::PoseCallback, this, std::placeholders::_1));
+    // odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>("odom_topic", 1, std::bind(&GlobalMapperRos::OdomCallback, this, std::placeholders::_1));
     goal_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>("goal_topic", 1, std::bind(&GlobalMapperRos::GoalCallback, this, std::placeholders::_1));
     pointcloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>("depth_pointcloud_topic", rclcpp::SensorDataQoS(), std::bind(&GlobalMapperRos::PointCloudCallback, this, std::placeholders::_1));
   }
@@ -210,7 +206,6 @@ namespace global_mapper_ros
     int grid_dimensions[3];
     occupancy_grid.GetGridDimensions(grid_dimensions);
 
-    // printf("Ra=%f\n", params_.Ra);
     // If you want all the unknown grid, and cropped to be inside the sphere Sa
     pcl::PointCloud<pcl::PointXYZ> cloud;
     // pcl::PointCloud<pcl::PointXYZ> cloud_frontier;
@@ -327,8 +322,7 @@ namespace global_mapper_ros
       }
     }
 
-
-    RCLCPP_INFO(this->get_logger(), "  [Occupancy] found %zu occupied cells", cloud.size());
+    // RCLCPP_INFO(this->get_logger(), "  [Occupancy] found %zu occupied cells", cloud.size());
 
     pcl::toROSMsg(cloud, *pointcloud);
     pointcloud->header.frame_id = "map";
@@ -615,7 +609,7 @@ namespace global_mapper_ros
     global_mapper_ptr_->UpdateOrigin(xyz);
   }
 
-  void GlobalMapperRos::PoseCallback(const snapstack_msgs::msg::State::SharedPtr pose_ptr)
+  void GlobalMapperRos::PoseCallback(const dynus_interfaces::msg::State::SharedPtr pose_ptr)
   {
     double xyz[3] = {pose_ptr->pos.x, pose_ptr->pos.y, pose_ptr->pos.z};
     if (!std::isfinite(xyz[0]) || !std::isfinite(xyz[1]) || !std::isfinite(xyz[2]))
@@ -651,53 +645,86 @@ namespace global_mapper_ros
   void GlobalMapperRos::PointCloudCallback(
       const sensor_msgs::msg::PointCloud2::ConstSharedPtr &cloud_msg)
   {
+    // 1) Receipt log
     RCLCPP_INFO(this->get_logger(), "Mapper:: PointCloud received");
-
     if (!got_depth_image_)
     {
       got_depth_image_ = true;
     }
 
-    // 1) Convert ROS2 PointCloud2 → PCL PointCloud<PointXYZI>
-    auto pcl_in = std::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
-    pcl::fromROSMsg(*cloud_msg, *pcl_in);
+    // 2) Convert ROS2 PointCloud2 → PCL PointCloud<PointXYZI>
+    pcl::PointCloud<pcl::PointXYZ> tmp;
+    pcl::fromROSMsg(*cloud_msg, tmp);
+    auto in = std::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
+    in->points.reserve(tmp.size());
 
-    // 2) Look up transform from cloud frame → global frame
+    std::cout << "In PointCloudCallback, tmp.size()=" << tmp.size() << std::endl;
+
+    for (const auto &pt : tmp.points)
+    {
+      pcl::PointXYZI pti;
+      pti.x = pt.x;
+      pti.y = pt.y;
+      pti.z = pt.z;
+      pti.intensity = 1.0f; // mark every point as a “hit”
+      in->points.push_back(pti);
+    }
+
+    // 3) Look up cloud → map transform
     const std::string target_frame = params_.global_frame;
     geometry_msgs::msg::TransformStamped tf_stamped;
     try
     {
-      rclcpp::Time stamp(cloud_msg->header.stamp);
       tf_stamped = tf_buffer_ptr_->lookupTransform(
           target_frame,
           cloud_msg->header.frame_id,
-          stamp,
+          rclcpp::Time(cloud_msg->header.stamp),
           rclcpp::Duration(std::chrono::milliseconds(20)));
     }
     catch (const tf2::TransformException &ex)
     {
-      RCLCPP_WARN(
-          this->get_logger(),
-          "[PointCloudCallback] lookupTransform failed: %s",
-          ex.what());
+      RCLCPP_WARN(this->get_logger(),
+                  "[PointCloudCallback] lookupTransform failed: %s", ex.what());
       return;
     }
 
-    // 3) Transform into world frame
-    Eigen::Affine3d eigen_tf = tf2::transformToEigen(tf_stamped);
-    auto world_cloud = std::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
-    pcl::transformPointCloud(*pcl_in, *world_cloud, eigen_tf);
+    // 4) Build Eigen matrix, guard NaN/Inf, cast to float
+    Eigen::Matrix4d mat_d = tf2::transformToEigen(tf_stamped).matrix();
+    if (!mat_d.allFinite())
+    {
+      RCLCPP_WARN(this->get_logger(),
+                  "Transform matrix contains NaN/Inf, skipping cloud");
+      return;
+    }
+    Eigen::Matrix4f mat_f = mat_d.cast<float>();
 
-    // 4) Fill sensor origin (so e.g. intensity-based clearing still works)
+    // 5) Manually apply transform (avoid PCL’s FPE)
+    auto world_cloud = std::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
+    world_cloud->points.reserve(in->points.size());
+    for (const auto &pt : in->points)
+    {
+      Eigen::Vector4f v(pt.x, pt.y, pt.z, 1.0f);
+      Eigen::Vector4f vt = mat_f * v;
+      pcl::PointXYZI wpt;
+      wpt.x = vt.x();
+      wpt.y = vt.y();
+      wpt.z = vt.z();
+      wpt.intensity = pt.intensity;
+      world_cloud->points.push_back(wpt);
+    }
+    RCLCPP_DEBUG(this->get_logger(),
+                 "World cloud has %zu points", world_cloud->points.size());
+
+    // 6) Fill sensor origin for ray tracing
     world_cloud->sensor_origin_ << tf_stamped.transform.translation.x,
         tf_stamped.transform.translation.y,
         tf_stamped.transform.translation.z,
-        1.0;
+        1.0f;
 
-    // 5) Push into your mapper
+    // 7) Push into mapper
     global_mapper_ptr_->PushPointCloud(world_cloud);
 
-    // 6) Update timestamp
+    // 8) Update last-fused timestamp
     tstampLastPclFused_ = cloud_msg->header.stamp;
   }
 

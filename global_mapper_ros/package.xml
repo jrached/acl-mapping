@@ -27,6 +27,7 @@
   <depend>global_mapper</depend>
   <depend>fla_interfaces</depend>
   <depend>snapstack_msgs</depend>
+  <depend>dynus_interfaces</depend>
   <depend>tf2_eigen</depend>
   <depend>sensor_msgs</depend>
   <depend>builtin_interfaces</depend>
