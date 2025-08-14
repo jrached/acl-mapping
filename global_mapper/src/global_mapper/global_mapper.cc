@@ -11,7 +11,8 @@ namespace global_mapper
                                          params_.occupancy_threshold),
         distance_grid_(params_.origin.data(), params_.world_dimensions.data(), params_.resolution,
                        params_.truncation_distance),
-        cost_grid_(params_.origin.data(), params_.world_dimensions.data(), params_.resolution), data_ready_(0)
+        cost_grid_(params_.origin.data(), params_.world_dimensions.data(), params_.resolution), 
+        temporal_grid_(params_.origin.data(), params_.world_dimensions.data(), params_.resolution), data_ready_(0) // TODO: initialize temporal grid here
   {
     origin_[0] = 0.0;
     origin_[1] = 0.0;
@@ -150,12 +151,15 @@ namespace global_mapper
   }
 
   void GlobalMapper::GetVoxelGrids(voxel_grid::VoxelGrid<float> *occupancy_grid,
-                                   voxel_grid::VoxelGrid<int> *distance_grid, voxel_grid::VoxelGrid<int> *cost_grid)
+                                   voxel_grid::VoxelGrid<int> *distance_grid, 
+                                   voxel_grid::VoxelGrid<int> *cost_grid,
+                                   voxel_grid::VoxelGrid<std::vector<double>> *temporal_grid)
   {
     std::lock_guard<std::mutex> output_lock(output_mutex_);
     *occupancy_grid = occupancy_grid_;
     *distance_grid = distance_grid_;
     *cost_grid = cost_grid_;
+    *temporal_grid_ = temporal_grid_;
   }
 
   void GlobalMapper::UpdateOccupancyGrid()
@@ -219,6 +223,17 @@ namespace global_mapper
     distance_grid_.UpdateDistances();
   }
 
+  void GlobalMapper::UpdateTemporalGrid(double timestamp)
+  {
+    std::vector<float> occ_grid = occupancy_grid_.GetData();
+    bool is_occupied;
+    for (int i = 0; i < occ_grid.size(); i++) // TODO: Potential bug source. These might not be in the right order!
+    {
+      is_occupied = occupancy_grid_.IsOccupied(i)
+      temporal_grid_.UpdateTemporalInfo(i, is_occupied, timestamp); 
+    }
+  }
+
   void GlobalMapper::GetOrigin(double xyz[3]) const
   {
     memcpy(xyz, origin_, sizeof(double) * 3);
@@ -260,6 +275,7 @@ namespace global_mapper
 
       occupancy_grid_.ResetDiffs();
       UpdateOccupancyGrid();
+      UpdateTemporalGrid(timestamp); // TODO: get timestamp from ROS node
       // UpdateDistanceGrid();
       // if ((spincount++ % 15) == 0)
       //{

@@ -57,6 +57,22 @@ install(
 )
 
 #-------------------------------------------------------------------------------
+# temporal_grid
+#-------------------------------------------------------------------------------
+add_library(temporal_grid SHARED src/temporal_grid/temporal_grid.cpp)
+target_include_directories(temporal_grid PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+target_link_libraries(temporal_grid PUBLIC ${PCL_LIBRARIES})
+install(
+  TARGETS temporal_grid
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION lib
+)
+
+#-------------------------------------------------------------------------------
 # global_mapper (top‐level)
 #-------------------------------------------------------------------------------
 add_library(global_mapper SHARED src/global_mapper/global_mapper.cc)

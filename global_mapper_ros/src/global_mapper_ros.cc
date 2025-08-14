@@ -497,8 +497,9 @@ namespace global_mapper_ros
     voxel_grid::VoxelGrid<float> occupancy_grid;
     voxel_grid::VoxelGrid<int> distance_grid;
     voxel_grid::VoxelGrid<int> cost_grid;
+    voxel_grid::VoxelGrid<std::vector<double>> temporal_grid;
 
-    global_mapper_ptr_->GetVoxelGrids(&occupancy_grid, &distance_grid, &cost_grid);
+    global_mapper_ptr_->GetVoxelGrids(&occupancy_grid, &distance_grid, &cost_grid, &temporal_grid);
 
     if (publish_occupancy_grid_)
     {

@@ -31,7 +31,7 @@ public:
   GlobalMapper(GlobalMapper&& rhs) = delete;
   GlobalMapper& operator=(GlobalMapper&& rhs) = delete;
   void GetVoxelGrids(voxel_grid::VoxelGrid<float>* occupancy_grid, voxel_grid::VoxelGrid<int>* distance_grid,
-                     voxel_grid::VoxelGrid<int>* cost_grid);
+                     voxel_grid::VoxelGrid<int>* cost_grid, voxel_grid::VoxelGrid<std::vector<double>>* temporal_grid);
   void PushPointCloud(const PointCloud::ConstPtr& cloud_ptr);
   void UpdateOrigin(const double xyz[3]);
   void GetOrigin(double xyz[3]) const;

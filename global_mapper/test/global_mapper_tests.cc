@@ -29,8 +29,9 @@ TEST(GlobalMapper, SetObstacles) {
   voxel_grid::VoxelGrid<float> occupancy_grid;
   voxel_grid::VoxelGrid<int> distance_grid;
   voxel_grid::VoxelGrid<int> cost_grid;
+  voxel_grid::VoxelGrid<std::vector<double>> temporal_grid;
   
-  mapper.GetVoxelGrids(&occupancy_grid, &distance_grid, &cost_grid);
+  mapper.GetVoxelGrids(&occupancy_grid, &distance_grid, &cost_grid, &temporal_grid);
   
   std::cout << "Occupancy Grid: " << std::endl;
   occupancy_grid.PrintValues();
