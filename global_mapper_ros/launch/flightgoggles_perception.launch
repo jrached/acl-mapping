@@ -44,6 +44,7 @@
       <remap from="camera/camera_info" to="camera/left/camera_info"/>
       <remap from="~occupancy_grid_topic" to="occupancy_grid"/>
       <remap from="~unknown_grid_topic" to="unknown_grid"/>
+      <remap from="~dynamic_grid_topic" to="dynamic_grid"/>
     </node>
   </group>
 

@@ -4,6 +4,11 @@
 
 #include "global_mapper/global_mapper.h"
 
+// TODO: Make occupancy thresholds parameters
+float OCCUPIED_THRESH = 5.0; 
+float UNOCCUPIED_THRESH = 1.0;
+
+
 namespace global_mapper
 {
   GlobalMapper::GlobalMapper(Params &params)
@@ -12,7 +17,7 @@ namespace global_mapper
         distance_grid_(params_.origin.data(), params_.world_dimensions.data(), params_.resolution,
                        params_.truncation_distance),
         cost_grid_(params_.origin.data(), params_.world_dimensions.data(), params_.resolution), 
-        temporal_grid_(params_.origin.data(), params_.world_dimensions.data(), params_.resolution), data_ready_(0) // TODO: initialize temporal grid here
+        temporal_grid_(params_.origin.data(), params_.world_dimensions.data(), params_.resolution, OCCUPIED_THRESH, UNOCCUPIED_THRESH), data_ready_(0) // TODO: initialize temporal grid here
   {
     origin_[0] = 0.0;
     origin_[1] = 0.0;
@@ -159,7 +164,7 @@ namespace global_mapper
     *occupancy_grid = occupancy_grid_;
     *distance_grid = distance_grid_;
     *cost_grid = cost_grid_;
-    *temporal_grid_ = temporal_grid_;
+    *temporal_grid = temporal_grid_;
   }
 
   void GlobalMapper::UpdateOccupancyGrid()
@@ -225,12 +230,27 @@ namespace global_mapper
 
   void GlobalMapper::UpdateTemporalGrid(double timestamp)
   {
-    std::vector<float> occ_grid = occupancy_grid_.GetData();
-    bool is_occupied;
-    for (int i = 0; i < occ_grid.size(); i++) // TODO: Potential bug source. These might not be in the right order!
+    int grid_dimensions[3];
+    temporal_grid_.GetGridDimensions(grid_dimensions);
+
+    for (int x = 0; x < grid_dimensions[0]; x++)
     {
-      is_occupied = occupancy_grid_.IsOccupied(i)
-      temporal_grid_.UpdateTemporalInfo(i, is_occupied, timestamp); 
+      for (int y = 0; y < grid_dimensions[1]; y++)
+      {
+        for (int z = 0; z < grid_dimensions[2]; z++)
+        {
+          int ixyz[3] = {x, y, z};
+          float occupancy_value = occupancy_grid_.ReadValue(ixyz);
+          bool is_occupied = occupancy_grid_.IsOccupied(occupancy_value); 
+          bool is_unknown = occupancy_grid_.IsUnknown(occupancy_value); 
+          temporal_grid_.UpdateTemporalInfo(ixyz, is_occupied, is_unknown, timestamp); 
+          
+          // Perform nearest neighbors
+          double xyz[3];
+          temporal_grid_.GridToWorld(ixyz, xyz);
+          temporal_grid_.NearestNeighbors(xyz, is_occupied, 3);
+        }
+      }
     }
   }
 
@@ -254,42 +274,50 @@ namespace global_mapper
     memcpy(xyz, goal_, sizeof(double) * 3);
   }
 
-  void GlobalMapper::Spin()
+  void GlobalMapper::Spin(double timestamp)
   {
     static int spincount = 0;
-
-    while (true)
+    // std::cout << "Here 0" << std::endl;
+    if (true) // TODO: Switch back to while loop!
     {
-      std::unique_lock<std::mutex> data_lock(data_mutex_);
-      condition_.wait(data_lock, [this]
-                      { return data_ready_; });
-      data_lock.unlock();
+      // std::unique_lock<std::mutex> data_lock(data_mutex_);
+      // std::cout << "Here 6.5" << std::endl;
+      // condition_.wait(data_lock, [this]
+      //                 { return data_ready_; });
+      // std::cout << "Here 6.75" << std::endl;
+      // data_lock.unlock();
 
-      std::unique_lock<std::mutex> output_lock(output_mutex_);
+      // std::cout << "Here 7" << std::endl;
+      // std::unique_lock<std::mutex> output_lock(output_mutex_);
 
-      origin_mutex_.lock();
+      // origin_mutex_.lock();
       occupancy_grid_.UpdateOrigin(origin_);
       // distance_grid_.UpdateOrigin(origin_);
       // cost_grid_.UpdateOrigin(origin_);
-      origin_mutex_.unlock();
+      // origin_mutex_.unlock();
 
+      // std::cout << "Here 8" << std::endl;
       occupancy_grid_.ResetDiffs();
       UpdateOccupancyGrid();
+      temporal_grid_.UpdateOrigin(origin_);
       UpdateTemporalGrid(timestamp); // TODO: get timestamp from ROS node
       // UpdateDistanceGrid();
       // if ((spincount++ % 15) == 0)
       //{
       //  UpdateCostGrid();
       //}
-      output_lock.unlock();
+      // std::cout << "Here 9" << std::endl;
+      // output_lock.unlock();
     }
+    // std::cout << "Here1" << std::endl;
   }
 
-  void GlobalMapper::Run()
+  void GlobalMapper::Run(double timestamp)
   {
     fprintf(stderr, "GlobalMapper::Run\n");
+    this->Spin(timestamp); 
 
-    thread_ = std::thread(&GlobalMapper::Spin, this);
+    // thread_ = std::thread(&GlobalMapper::Spin, this, timestamp);
   }
 
 } // namespace global_mapper

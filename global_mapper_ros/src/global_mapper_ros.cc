@@ -6,7 +6,7 @@ using namespace std::chrono_literals;
 namespace global_mapper_ros
 {
   GlobalMapperRos::GlobalMapperRos()
-      : Node("global_mapper_ros"), publish_occupancy_grid_(false), publish_distance_grid_(false), publish_cost_grid_(false), publish_path_(false), clear_unknown_distance_(0.0), target_altitude_(0.0)
+      : Node("global_mapper_ros"), publish_occupancy_grid_(false), publish_distance_grid_(false), publish_cost_grid_(false), publish_path_(false), publish_dynamic_grid_(false), clear_unknown_distance_(0.0), target_altitude_(0.0)
   {
 
     // og code did not define buffer for some reason
@@ -24,7 +24,7 @@ namespace global_mapper_ros
     this->declare_parameter<std::string>("global_frame", "map");
     this->declare_parameter<std::vector<double>>("origin", {0.0, 0.0, 0.0});
     this->declare_parameter<std::vector<double>>("world_dimensions", {20.0, 20.0, 4.0});
-    this->declare_parameter<double>("resolution", 0.15);
+    this->declare_parameter<double>("resolution", 0.3);
     this->declare_parameter<double>("radius_drone", 0.1);
     this->declare_parameter<double>("z_ground", 0.1);
     this->declare_parameter<int>("skip", 0);
@@ -36,9 +36,9 @@ namespace global_mapper_ros
 
     // namespaced ones:
     this->declare_parameter<double>("occupancy_grid.init_value", 0.0);
-    this->declare_parameter<double>("occupancy_grid.hit_inc", 1.0);
-    this->declare_parameter<double>("occupancy_grid.miss_inc", 0.0);
-    this->declare_parameter<double>("occupancy_grid.occupancy_threshold", 0.2);
+    this->declare_parameter<double>("occupancy_grid.hit_inc", 0.4);
+    this->declare_parameter<double>("occupancy_grid.miss_inc", -0.4);
+    this->declare_parameter<double>("occupancy_grid.occupancy_threshold", 0.6);
     this->declare_parameter<bool>("occupancy_grid.publish_occupancy_grid", true);
     this->declare_parameter<bool>("occupancy_grid.publish_unknown_grid", true);
     this->declare_parameter<double>("occupancy_grid.clear_unknown_distance", 5.0);
@@ -54,6 +54,7 @@ namespace global_mapper_ros
     this->declare_parameter<int>("cost_grid.unknown_weight", 20);
     this->declare_parameter<int>("cost_grid.obstacle_weight", 10000);
     this->declare_parameter<double>("cost_grid.target_altitude", 2.0);
+    this->declare_parameter<bool>("temporal_grid.publish_dynamic_grid", true);
 
     fla_utils::SafeGetParam(*this, "global_frame", params_.global_frame);
     fla_utils::SafeGetParam(*this, "origin", params_.origin);
@@ -91,6 +92,9 @@ namespace global_mapper_ros
     fla_utils::SafeGetParam(*this, "cost_grid.obstacle_weight", params_.obstacle_weight);
     fla_utils::SafeGetParam(*this, "cost_grid.target_altitude", target_altitude_);
 
+    // temporal_grid 
+    fla_utils::SafeGetParam(*this, "temporal_grid.publish_dynamic_grid", publish_dynamic_grid_);
+
     // Print the parameters to the console
     RCLCPP_INFO(this->get_logger(), "Global Mapper Parameters:");
     RCLCPP_INFO(this->get_logger(), "  global_frame: %s", params_.global_frame.c_str());
@@ -122,6 +126,7 @@ namespace global_mapper_ros
     RCLCPP_INFO(this->get_logger(), "  cost_grid.unknown_weight: %d", params_.unknown_weight);
     RCLCPP_INFO(this->get_logger(), "  cost_grid.obstacle_weight: %d", params_.obstacle_weight);
     RCLCPP_INFO(this->get_logger(), "  cost_grid.target_altitude: %f", target_altitude_);
+    RCLCPP_INFO(this->get_logger(), "  temporal_grid.publish_dynamic_grid: %s", publish_dynamic_grid_ ? "true" : "false");
   }
 
   void GlobalMapperRos::InitSubscribers()
@@ -163,6 +168,11 @@ namespace global_mapper_ros
     {
       path_pub_ = this->create_publisher<nav_msgs::msg::Path>("path_topic", 10);
       sparse_path_pub_ = this->create_publisher<nav_msgs::msg::Path>("sparse_path_topic", 10);
+    }
+
+    if (publish_dynamic_grid_)
+    {
+      dynamic_grid_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("dynamic_grid_topic", sensor_qos);
     }
 
     // i dont understand why this was commented out
@@ -490,6 +500,56 @@ namespace global_mapper_ros
     }
   }
 
+  void GlobalMapperRos::PopulateDynamicPointCloudMsg(const voxel_grid::VoxelGrid<float>& occupancy_grid, 
+                          const voxel_grid::VoxelGrid<std::vector<double>>& temporal_grid, 
+                          sensor_msgs::msg::PointCloud2* pointcloud)
+  {
+     // check for bad input
+    if (pointcloud == nullptr)
+    {
+      return;
+    }
+
+    int grid_dimensions[3];
+    occupancy_grid.GetGridDimensions(grid_dimensions);
+
+    double xyz[3] = {0.0};
+    pcl::PointCloud<pcl::PointXYZ> cloud;
+    for (int x = 0; x < grid_dimensions[0]; x++)
+    {
+      for (int y = 0; y < grid_dimensions[1]; y++)
+      {
+        for (int z = 0; z < grid_dimensions[2]; z++)
+        {
+          int ixyz[3] = {x, y, z};
+          float occupancy_value = occupancy_grid.ReadValue(ixyz);
+          bool is_occupied = global_mapper_ptr_->occupancy_grid_.IsOccupied(occupancy_value); 
+          bool is_dynamic = global_mapper_ptr_->temporal_grid_.IsDynamic(ixyz, is_occupied);
+          // std::cout << "Here 1" << std::endl;
+          // std::cout << "Is occupied: " << is_occupied << ", is dynamic: " << is_dynamic << std::endl;
+          if (is_dynamic)
+          {
+            // std::cout << "Here 2" << std::endl;
+            occupancy_grid.GridToWorld(ixyz, xyz);
+            if (xyz[2] > params_.z_ground) // only publish points above the ground
+            {
+              // std::cout << "Here 3" << std::endl;
+              cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
+            }
+          }
+        }
+      }
+    }
+
+    // RCLCPP_INFO(this->get_logger(), "  [Occupancy] found %zu occupied cells", cloud.size());
+    pcl::toROSMsg(cloud, *pointcloud);
+    pointcloud->header.frame_id = "map";
+    pointcloud->header.stamp = rclcpp::Clock().now();
+    // I (Jesus) changed the stamp so that it is the same as the last point cloud used in this map
+    // pointcloud->header.stamp = tstampLastPclFused_;
+
+  }                          
+
   // might be good to add more debug warnings, e.g dense and sparse paths are emtpy
   void GlobalMapperRos::Publish()
   {
@@ -547,6 +607,13 @@ namespace global_mapper_ros
 
       path_pub_->publish(dense_path_msg);
       sparse_path_pub_->publish(sparse_path_msg);
+    }
+
+    if (publish_dynamic_grid_)
+    {
+      sensor_msgs::msg::PointCloud2 dynamic_pointcloud_msg;
+      PopulateDynamicPointCloudMsg(occupancy_grid, temporal_grid, &dynamic_pointcloud_msg);
+      dynamic_grid_pub_->publish(dynamic_pointcloud_msg);
     }
   }
 
@@ -712,12 +779,17 @@ namespace global_mapper_ros
     // start your mapping thread
     global_mapper_ptr_ = std::make_unique<
         global_mapper::GlobalMapper>(params_);
-    global_mapper_ptr_->Run();
 
     // ── spin loop ──
     rclcpp::Rate spin_rate(100.0);
     while (rclcpp::ok())
     {
+      // std::cout << "Here 4.75" << std::endl;
+      
+      global_mapper_ptr_->Run(this->now().seconds()); // TODO: Move back outisde of while loop!
+
+      // std::cout << "Here 2" << std::endl;
+
       if (!got_pose_)
       {
         this->process_status_->SetStatus(
@@ -743,9 +815,14 @@ namespace global_mapper_ros
         this->process_status_->SetArg(ProcessArgs::NOMINAL);
       }
 
+      // std::cout << "Here 3" << std::endl;
+
       rclcpp::spin_some(this->shared_from_this());
       spin_rate.sleep();
+      
+      // std::cout << "Here 4" << std::endl;
     }
+    // std::cout << "Here 4.5" << std::endl;
   }
 
 } // namespace global_mapper_ros
@@ -757,7 +834,10 @@ int main(int argc, char **argv)
   auto node = std::make_shared<global_mapper_ros::GlobalMapperRos>();
   RCLCPP_INFO(node->get_logger(), "Global Mapper ROS Loop Started.");
   node->Run();
+  // std::cout << "Here 5" << std::endl;
 
   rclcpp::shutdown();
+
+  // std::cout << "Here 6" << std::endl;
   return 0;
 }

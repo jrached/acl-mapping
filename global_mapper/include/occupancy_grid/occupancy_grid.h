@@ -36,10 +36,12 @@ class OccupancyGrid : public voxel_grid::VoxelGrid<float> {
   void ResetDiffs() { marked_list_.clear(); cleared_list_.clear(); }
   float GetThreshold() const  { return threshold_; }
 
+  bool IsOccupied(const int ind) const; // TODO: Move back to private!
+
  private:
   virtual void PreShiftOrigin(const std::vector<int>& slice_indexes) override;
   virtual void PostShiftOrigin(const std::vector<int>& slice_indexes) override;
-  bool IsOccupied(const int ind) const;
+  
   void UpdateValue(const int ind, float delta);
   float clamp_value(float x, float min, float max) const;
 

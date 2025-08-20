@@ -23,7 +23,10 @@ def generate_launch_description():
     distance_grid_topic    = LaunchConfiguration('distance_grid_topic')
     cost_grid_topic        = LaunchConfiguration('cost_grid_topic')
     path_topic             = LaunchConfiguration('path_topic')
+    # dynamic_grid_topic   = LaunchConfiguration('dynamic_grid_topic')
     sparse_path_topic      = LaunchConfiguration('sparse_path_topic')
+
+    param_file_launch_arg = DeclareLaunchArgument('param_file',           default_value='flightgoggles.yaml',           description='name of your params file (in cfg/)')
 
     # where to find your .yaml (make sure you install it; see below)
     param_file_path = PathJoinSubstitution([
@@ -36,7 +39,6 @@ def generate_launch_description():
         #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
         DeclareLaunchArgument('quad',                 default_value='NX01',                        description='name of the quad / ros namespace'),
         DeclareLaunchArgument('load_params',          default_value='true',                        description='whether to load the YAML params'),
-        DeclareLaunchArgument('param_file',           default_value='global_mapper.yaml',           description='name of your params file (in cfg/)'),
         DeclareLaunchArgument('depth_pointcloud_topic', default_value='mid360_PointCloud2',  description='input pointcloud topic'),
         # DeclareLaunchArgument('depth_pointcloud_topic', default_value='d435/depth/color/points',  description='input pointcloud topic'),
         DeclareLaunchArgument('pose_topic',           default_value='state',                        description='input pose topic'),
@@ -49,7 +51,9 @@ def generate_launch_description():
         DeclareLaunchArgument('distance_grid_topic',  default_value='distance_grid',               description='output distance grid topic'),
         DeclareLaunchArgument('cost_grid_topic',      default_value='cost_grid',                   description='output cost grid topic'),
         DeclareLaunchArgument('path_topic',           default_value='path',                        description='output path topic'),
+        # DeclareLaunchArgument('dynamic_grid',           default_value='dynamic_grid',                        description='output dynamic grid topic'),
         DeclareLaunchArgument('sparse_path_topic',    default_value='sparse_path',                 description='output sparse path topic'),
+        param_file_launch_arg,
 
         #––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
         Node(
@@ -71,6 +75,7 @@ def generate_launch_description():
                 ('distance_grid_topic',  distance_grid_topic),
                 ('cost_grid_topic',      cost_grid_topic),
                 ('path_topic',           path_topic),
+                # ('dynamic_grid_topic',   dynamic_grid_topic),
                 ('sparse_path_topic',    sparse_path_topic),
             ],
             # prefix='xterm -e gdb -q -ex run --args', # gdb debugging

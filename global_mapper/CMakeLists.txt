@@ -59,7 +59,7 @@ install(
 #-------------------------------------------------------------------------------
 # temporal_grid
 #-------------------------------------------------------------------------------
-add_library(temporal_grid SHARED src/temporal_grid/temporal_grid.cpp)
+add_library(temporal_grid SHARED src/temporal_grid/temporal_grid.cc)
 target_include_directories(temporal_grid PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
@@ -101,6 +101,7 @@ install(
 ament_export_libraries(occupancy_grid
                        distance_grid
                        cost_grid
+                       temporal_grid
                        global_mapper)
 ament_export_dependencies(PCL Eigen3)
 ament_package()

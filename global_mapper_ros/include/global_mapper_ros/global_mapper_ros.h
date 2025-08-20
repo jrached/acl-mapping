@@ -71,6 +71,9 @@ private:
                                      sensor_msgs::msg::PointCloud2* pointcloud);
   void PopulateCostPointCloudMsg(const voxel_grid::VoxelGrid<int>& cost_grid, sensor_msgs::msg::PointCloud2* pointcloud);
   void PopulatePathMsg(const std::vector<std::array<double, 3>>& path, nav_msgs::msg::Path* path_msg);
+  void PopulateDynamicPointCloudMsg(const voxel_grid::VoxelGrid<float>& occupancy_grid, 
+                           const voxel_grid::VoxelGrid<std::vector<double>>& temporal_grid, 
+                           sensor_msgs::msg::PointCloud2* pointcloud);
   void Publish();
 
   // callbacks
@@ -98,6 +101,7 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr frontier_grid_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr dist_grid_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cost_grid_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr dynamic_grid_pub_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_pub_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr sparse_path_pub_;
 
@@ -118,6 +122,7 @@ private:
   bool publish_distance_grid_;
   bool publish_cost_grid_;
   bool publish_path_;
+  bool publish_dynamic_grid_;
   double clear_unknown_distance_;
   double target_altitude_;
 

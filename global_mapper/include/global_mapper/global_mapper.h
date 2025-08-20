@@ -16,6 +16,7 @@
 #include "occupancy_grid/occupancy_grid.h"
 #include "distance_grid/distance_grid.h"
 #include "cost_grid/cost_grid.h"
+#include "temporal_grid/temporal_grid.h"
 
 namespace global_mapper
 {
@@ -43,7 +44,7 @@ public:
   void SetObstacle(const double xyz[3]);
   void RemoveObstacle(const double xyz[3]);
   void UpdateGrids();
-  void Run();
+  void Run(double timestamp);
 
   Params params_;
   occupancy_grid::OccupancyGrid occupancy_grid_;
@@ -58,7 +59,7 @@ private:
   void UpdateDistanceGrid();
   void UpdateCostGrid();
   void UpdateTemporalGrid(double timestamp); 
-  void Spin();
+  void Spin(double timestamp);
 
   std::deque<PointCloud::ConstPtr> point_cloud_buffer_;
 
