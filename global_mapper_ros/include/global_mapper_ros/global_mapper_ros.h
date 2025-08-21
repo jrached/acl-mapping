@@ -73,7 +73,8 @@ private:
   void PopulatePathMsg(const std::vector<std::array<double, 3>>& path, nav_msgs::msg::Path* path_msg);
   void PopulateDynamicPointCloudMsg(const voxel_grid::VoxelGrid<float>& occupancy_grid, 
                            const voxel_grid::VoxelGrid<std::vector<double>>& temporal_grid, 
-                           sensor_msgs::msg::PointCloud2* pointcloud);
+                           sensor_msgs::msg::PointCloud2* dynamic_pointcloud,
+                           sensor_msgs::msg::PointCloud2* static_pointcloud);
   void Publish();
 
   // callbacks
@@ -102,6 +103,7 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr dist_grid_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cost_grid_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr dynamic_grid_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr static_grid_pub_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_pub_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr sparse_path_pub_;
 

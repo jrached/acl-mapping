@@ -6,7 +6,7 @@
 
 // TODO: Make occupancy thresholds parameters
 float OCCUPIED_THRESH = 5.0; 
-float UNOCCUPIED_THRESH = 1.0;
+float UNOCCUPIED_THRESH = 0.1;
 
 
 namespace global_mapper
@@ -68,13 +68,16 @@ namespace global_mapper
     memcpy(origin_, xyz, sizeof(double) * 3);
   }
 
-  void GlobalMapper::PushPointCloud(const PointCloud::ConstPtr &cloud_ptr)
+  void GlobalMapper::PushPointCloud(const PointCloud::ConstPtr &cloud_ptr, double timestamp)
   {
     // push
     std::lock_guard<std::mutex> cloud_lock(cloud_mutex_);
 
     point_cloud_buffer_.clear(); // Jesus added this (remove all the previous point clouds--> queue will be only 1)
+    timestamp_buffer_.clear();
+
     point_cloud_buffer_.push_back(cloud_ptr);
+    timestamp_buffer_.push_back(timestamp);
 
     // notify
     std::unique_lock<std::mutex> data_lock(data_mutex_);
@@ -88,12 +91,19 @@ namespace global_mapper
     // pop
     std::lock_guard<std::mutex> cloud_lock(cloud_mutex_);
     PointCloud::ConstPtr cloud_ptr = nullptr;
-    if (point_cloud_buffer_.size() > 0)
+    if (!point_cloud_buffer_.empty())
     {
       cloud_ptr = point_cloud_buffer_.front();
       point_cloud_buffer_.pop_front();
     }
 
+    if (!timestamp_buffer_.empty())
+    {
+      timestamp_ = timestamp_buffer_.front();
+      timestamp_buffer_.pop_front(); 
+    }
+    
+    
     // notify
     std::unique_lock<std::mutex> data_lock(data_mutex_);
     if (point_cloud_buffer_.size() == 0)
@@ -244,11 +254,6 @@ namespace global_mapper
           bool is_occupied = occupancy_grid_.IsOccupied(occupancy_value); 
           bool is_unknown = occupancy_grid_.IsUnknown(occupancy_value); 
           temporal_grid_.UpdateTemporalInfo(ixyz, is_occupied, is_unknown, timestamp); 
-          
-          // Perform nearest neighbors
-          double xyz[3];
-          temporal_grid_.GridToWorld(ixyz, xyz);
-          temporal_grid_.NearestNeighbors(xyz, is_occupied, 3);
         }
       }
     }
@@ -274,50 +279,41 @@ namespace global_mapper
     memcpy(xyz, goal_, sizeof(double) * 3);
   }
 
-  void GlobalMapper::Spin(double timestamp)
+  void GlobalMapper::Spin()
   {
     static int spincount = 0;
-    // std::cout << "Here 0" << std::endl;
-    if (true) // TODO: Switch back to while loop!
+    while (true) // TODO: Switch back to while loop!
     {
-      // std::unique_lock<std::mutex> data_lock(data_mutex_);
-      // std::cout << "Here 6.5" << std::endl;
-      // condition_.wait(data_lock, [this]
-      //                 { return data_ready_; });
-      // std::cout << "Here 6.75" << std::endl;
-      // data_lock.unlock();
+      std::unique_lock<std::mutex> data_lock(data_mutex_);
+      condition_.wait(data_lock, [this]
+                       { return data_ready_; });
+      data_lock.unlock();
 
-      // std::cout << "Here 7" << std::endl;
-      // std::unique_lock<std::mutex> output_lock(output_mutex_);
+      std::unique_lock<std::mutex> output_lock(output_mutex_);
 
-      // origin_mutex_.lock();
+      origin_mutex_.lock();
       occupancy_grid_.UpdateOrigin(origin_);
       // distance_grid_.UpdateOrigin(origin_);
       // cost_grid_.UpdateOrigin(origin_);
-      // origin_mutex_.unlock();
+      origin_mutex_.unlock();
 
-      // std::cout << "Here 8" << std::endl;
       occupancy_grid_.ResetDiffs();
       UpdateOccupancyGrid();
       temporal_grid_.UpdateOrigin(origin_);
-      UpdateTemporalGrid(timestamp); // TODO: get timestamp from ROS node
+      UpdateTemporalGrid(timestamp_); // TODO: get timestamp from ROS node
       // UpdateDistanceGrid();
       // if ((spincount++ % 15) == 0)
       //{
       //  UpdateCostGrid();
       //}
-      // std::cout << "Here 9" << std::endl;
-      // output_lock.unlock();
+      output_lock.unlock();
     }
-    // std::cout << "Here1" << std::endl;
   }
 
-  void GlobalMapper::Run(double timestamp)
+  void GlobalMapper::Run()
   {
     fprintf(stderr, "GlobalMapper::Run\n");
-    this->Spin(timestamp); 
-
-    // thread_ = std::thread(&GlobalMapper::Spin, this, timestamp);
+    thread_ = std::thread(&GlobalMapper::Spin, this);
   }
 
 } // namespace global_mapper

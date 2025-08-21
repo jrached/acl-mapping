@@ -173,6 +173,7 @@ namespace global_mapper_ros
     if (publish_dynamic_grid_)
     {
       dynamic_grid_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("dynamic_grid_topic", sensor_qos);
+      static_grid_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("static_grid_topic", sensor_qos);
     }
 
     // i dont understand why this was commented out
@@ -502,10 +503,11 @@ namespace global_mapper_ros
 
   void GlobalMapperRos::PopulateDynamicPointCloudMsg(const voxel_grid::VoxelGrid<float>& occupancy_grid, 
                           const voxel_grid::VoxelGrid<std::vector<double>>& temporal_grid, 
-                          sensor_msgs::msg::PointCloud2* pointcloud)
+                          sensor_msgs::msg::PointCloud2* dynamic_pointcloud,
+                          sensor_msgs::msg::PointCloud2* static_pointcloud)
   {
      // check for bad input
-    if (pointcloud == nullptr)
+    if (dynamic_pointcloud == nullptr || static_pointcloud == nullptr)
     {
       return;
     }
@@ -514,7 +516,8 @@ namespace global_mapper_ros
     occupancy_grid.GetGridDimensions(grid_dimensions);
 
     double xyz[3] = {0.0};
-    pcl::PointCloud<pcl::PointXYZ> cloud;
+    pcl::PointCloud<pcl::PointXYZ> dynamic_cloud;
+    pcl::PointCloud<pcl::PointXYZ> static_cloud;
     for (int x = 0; x < grid_dimensions[0]; x++)
     {
       for (int y = 0; y < grid_dimensions[1]; y++)
@@ -525,26 +528,37 @@ namespace global_mapper_ros
           float occupancy_value = occupancy_grid.ReadValue(ixyz);
           bool is_occupied = global_mapper_ptr_->occupancy_grid_.IsOccupied(occupancy_value); 
           bool is_dynamic = global_mapper_ptr_->temporal_grid_.IsDynamic(ixyz, is_occupied);
-          // std::cout << "Here 1" << std::endl;
-          // std::cout << "Is occupied: " << is_occupied << ", is dynamic: " << is_dynamic << std::endl;
-          if (is_dynamic)
+          if (global_mapper_ptr_->temporal_grid_.GetTemporalInfo(ixyz).size() != 0 && is_occupied)
           {
-            // std::cout << "Here 2" << std::endl;
             occupancy_grid.GridToWorld(ixyz, xyz);
-            if (xyz[2] > params_.z_ground) // only publish points above the ground
+            if (is_dynamic)
             {
-              // std::cout << "Here 3" << std::endl;
-              cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
+              if (xyz[2] > params_.z_ground) // only publish points above the ground
+              {
+                dynamic_cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
+              }
+            }
+            else
+            {
+              if (xyz[2] > params_.z_ground) // only publish points above the ground
+              {
+                static_cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
+              }
             }
           }
         }
       }
     }
 
-    // RCLCPP_INFO(this->get_logger(), "  [Occupancy] found %zu occupied cells", cloud.size());
-    pcl::toROSMsg(cloud, *pointcloud);
-    pointcloud->header.frame_id = "map";
-    pointcloud->header.stamp = rclcpp::Clock().now();
+    // RCLCPP_INFO(this->get_logger(), "  [Occupancy] found %zu occupied cells", dynamic_cloud.size());
+    pcl::toROSMsg(dynamic_cloud, *dynamic_pointcloud);
+    dynamic_pointcloud->header.frame_id = "map";
+    dynamic_pointcloud->header.stamp = rclcpp::Clock().now();
+
+    pcl::toROSMsg(static_cloud, *static_pointcloud);
+    static_pointcloud->header.frame_id = "map";
+    static_pointcloud->header.stamp = rclcpp::Clock().now();
+
     // I (Jesus) changed the stamp so that it is the same as the last point cloud used in this map
     // pointcloud->header.stamp = tstampLastPclFused_;
 
@@ -612,8 +626,10 @@ namespace global_mapper_ros
     if (publish_dynamic_grid_)
     {
       sensor_msgs::msg::PointCloud2 dynamic_pointcloud_msg;
-      PopulateDynamicPointCloudMsg(occupancy_grid, temporal_grid, &dynamic_pointcloud_msg);
+      sensor_msgs::msg::PointCloud2 static_pointcloud_msg;
+      PopulateDynamicPointCloudMsg(occupancy_grid, temporal_grid, &dynamic_pointcloud_msg, &static_pointcloud_msg);
       dynamic_grid_pub_->publish(dynamic_pointcloud_msg);
+      static_grid_pub_->publish(static_pointcloud_msg);
     }
   }
 
@@ -750,7 +766,7 @@ namespace global_mapper_ros
         1.0f;
 
     // 7) Push into mapper
-    global_mapper_ptr_->PushPointCloud(world_cloud);
+    global_mapper_ptr_->PushPointCloud(world_cloud, this->now().seconds());
 
     // 8) Update last-fused timestamp
     tstampLastPclFused_ = cloud_msg->header.stamp;
@@ -780,16 +796,12 @@ namespace global_mapper_ros
     global_mapper_ptr_ = std::make_unique<
         global_mapper::GlobalMapper>(params_);
 
-    // ── spin loop ──
+    global_mapper_ptr_->Run(); 
+    
+        // ── spin loop ──
     rclcpp::Rate spin_rate(100.0);
     while (rclcpp::ok())
-    {
-      // std::cout << "Here 4.75" << std::endl;
-      
-      global_mapper_ptr_->Run(this->now().seconds()); // TODO: Move back outisde of while loop!
-
-      // std::cout << "Here 2" << std::endl;
-
+    {      
       if (!got_pose_)
       {
         this->process_status_->SetStatus(
@@ -815,14 +827,9 @@ namespace global_mapper_ros
         this->process_status_->SetArg(ProcessArgs::NOMINAL);
       }
 
-      // std::cout << "Here 3" << std::endl;
-
       rclcpp::spin_some(this->shared_from_this());
       spin_rate.sleep();
-      
-      // std::cout << "Here 4" << std::endl;
-    }
-    // std::cout << "Here 4.5" << std::endl;
+          }
   }
 
 } // namespace global_mapper_ros

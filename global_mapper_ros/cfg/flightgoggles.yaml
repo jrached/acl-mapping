@@ -3,10 +3,10 @@
 
     # global_frame: world
     # origin: [0.0, 0.0, 0.0]  # [m]
-    world_dimensions: [14.0, 14.0, 3.0]  # [m]  16   16   4
+    world_dimensions: [14.0, 14.0, 10.0]  # [m]  16   16   4
     resolution: 0.3  # [m]   0.15
     # radius_drone: 1.0 # [m] THIS SHOULD BE HIGHER THAN THE RESOLUTION!!
-    Ra: 10.0 # [m] radius of the first sphere (Sa) in the planner. The unknown pcloud published will only contain points inside this sphere
+    Ra: 14.0 # [m] radius of the first sphere (Sa) in the planner. The unknown pcloud published will only contain points inside this sphere
     # z_ground: 0.1 #[m] points below z_ground are not published in the known grid
     # skip: 0  #[pixels] Numbers of pixels to skip in the depth map. Should be >=0
     # depth_max: 30.0 #[m] In the depth image, points farther than depth_max, are treated as inf (i.e. along its ray (and up to that point) only unknown voxels are cleared. If doing simulation, this should be 5 (actually it should be the clipping distance of the depth image, but somehow it's always clipped at 5 meters)
@@ -19,7 +19,7 @@
     occupancy_grid:
     #   init_value: -1.0
       hit_inc: 0.4 #Was 0.4
-      miss_inc: -4.0
+      miss_inc: -0.2
       occupancy_threshold: 0.6  # [0.0, 1.0]
     #   publish_occupancy_grid: true
     #   publish_unknown_grid: true

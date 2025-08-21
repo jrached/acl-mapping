@@ -8,52 +8,56 @@ namespace temporal_grid
 TemporalGrid::TemporalGrid(const double origin[3], const double world_dimensions[3], const float resolution, float occupied_threshold, float unoccupied_threshold) 
 : voxel_grid::VoxelGrid<std::vector<double>>(origin, world_dimensions, resolution), occupied_threshold_(occupied_threshold), unoccupied_threshold_(unoccupied_threshold), resolution_(resolution)
 {
+    offsets_ = this->generateOffsets(resolution_);
 }
 
 void TemporalGrid::UpdateTemporalInfo(const int ind, const bool is_occupied, const bool is_unknown, const double timestamp)
 {
-    timestamp_ = timestamp;
-    std::vector temporal_info = this->ReadValue(ind); // {is_free, occupied_ruation, unoccupied_ruation, last_occupied_time, last_unoccupied_time}
-    if (temporal_info.size() == 0) 
-    {
-        temporal_info = {0.0, 0.0, 0.0, timestamp, timestamp, timestamp};
-        this->WriteValue(ind, temporal_info); 
-    }
-    double is_free = temporal_info[0],
-            occupied_duration = temporal_info[1], 
-            unoccupied_duration = temporal_info[2],
-            last_occupied_time = temporal_info[3], 
-            last_unoccupied_time = temporal_info[4], 
-            start_time = temporal_info[5];
 
-    // Record occupancy duration 
-    if (is_occupied) 
+    if (is_unknown == false)
     {
-        occupied_duration = timestamp - last_unoccupied_time;
-        unoccupied_duration = 0.0; 
-        last_occupied_time = timestamp; 
-    } else
-    {
-        unoccupied_duration = timestamp - last_occupied_time; 
-        occupied_duration = 0.0;
-        last_unoccupied_time = timestamp;    
-    }
+        timestamp_ = timestamp;
 
-    if (unoccupied_duration > unoccupied_threshold_) 
-    {
-        is_free = 1.0; 
-    }
-    if (occupied_duration > occupied_threshold_) 
-    {
-        is_free = 0.0;
-    }
+        // Initialize temporal grid voxels 
+        std::vector temporal_info = this->ReadValue(ind); // {is_free, occupied_ruation, unoccupied_ruation, last_occupied_time, last_unoccupied_time}
+        if (temporal_info.size() == 0) 
+        {
+            temporal_info = {0.0, 0.0, 0.0, timestamp, timestamp, timestamp};
+            this->WriteValue(ind, temporal_info); 
+        }
+        double is_free = temporal_info[0],
+                occupied_duration = temporal_info[1], 
+                unoccupied_duration = temporal_info[2],
+                last_occupied_time = temporal_info[3], 
+                last_unoccupied_time = temporal_info[4], 
+                start_time = temporal_info[5];
 
-    temporal_info = {is_free, occupied_duration, unoccupied_duration, last_occupied_time, last_unoccupied_time, start_time};
-    if (is_unknown)
-    {
-        temporal_info = {0.0, 0.0, 0.0, timestamp, timestamp, timestamp};
+        // Record occupancy duration 
+        if (is_occupied) 
+        {
+            occupied_duration = timestamp - last_unoccupied_time;
+            unoccupied_duration = 0.0; 
+            last_occupied_time = timestamp; 
+        } else
+        {
+            unoccupied_duration = timestamp - last_occupied_time; 
+            occupied_duration = 0.0;
+            last_unoccupied_time = timestamp;    
+        }
+
+        // Segment free and not free space 
+        if (unoccupied_duration > unoccupied_threshold_) 
+        {
+            is_free = 1.0; 
+        }
+        if (occupied_duration > occupied_threshold_) 
+        {
+            is_free = 0.0;
+        }
+
+        temporal_info = {is_free, occupied_duration, unoccupied_duration, last_occupied_time, last_unoccupied_time, start_time};
+        this->WriteValue(ind, temporal_info);
     }
-    this->WriteValue(ind, temporal_info);
 }
 
 void TemporalGrid::UpdateTemporalInfo(const int ixyz[3], const bool is_occupied, const bool is_unknown, const double timestamp)
@@ -76,54 +80,51 @@ void TemporalGrid::UpdateTemporalInfo(const double xyz[3], const bool is_occupie
     }
 }
 
-// TODO: implement with KD-Tree
-void TemporalGrid::NearestNeighbors(const double xyz[3], bool is_occupied, int neigh_thresh)
+// TODO: implement with KD-Tree (more efficient without kd-trees?)
+float TemporalGrid::NearestNeighbors(const double xyz[3], int neigh_thresh)
 {
-    std::vector<std::vector<double>> offsets = this->generateOffsets(resolution_);
-
     // // If free and occupied (i.e. either dynamic or noise)
     std::vector<double> temporal_info = this->GetTemporalInfo(xyz);
     int not_free_neigh_counter = 0;
-    if (is_occupied && temporal_info[0] == 1.0) 
+    double neigh_xyz[3]; 
+    if (temporal_info[0] == 1.0) 
     {
-        for (const auto offset : offsets) 
+        for (const auto offset : offsets_) 
         {
-            int neigh_xyz[3]; 
             neigh_xyz[0] = xyz[0] + offset[0];
             neigh_xyz[1] = xyz[1] + offset[1];
             neigh_xyz[2] = xyz[2] + offset[2];
             
             // Check whether neighbors are not free space
             temporal_info = this->GetTemporalInfo(neigh_xyz);
-            if (temporal_info[0] == 0.0) 
+            if (temporal_info.size() != 0 && temporal_info[0] == 0.0) 
             {
                 not_free_neigh_counter++;
             }
 
-            // If enough neighbors are not free space, this voxel must be not free space
+            // If enough neighbors are not free space, this voxel must be static
             if (not_free_neigh_counter >= neigh_thresh) 
             {
                 this->SetFree(xyz, 0.0);
-                return;
+                return 0.0;
             }
         }
+        return 1.0; // If voxel is occupied free space and not enough neighbors are static, then it must be dynamic
     }
-    else
-    {
-        return;
-    }
+    return temporal_info[0];
 }
 
 bool TemporalGrid::IsDynamic(const int ind, bool is_occupied) 
 {
-    // TODO: Fix empty vector error!
     std::vector<double> voxel = this->ReadValue(ind);
-    if (voxel.size() == 0)
+    if (voxel.size() != 0 && is_occupied)
     {
-        return false; // Voxel has not been initialized 
+        double xyz[3];
+        this->IndexToWorld(ind, xyz);
+        return this->NearestNeighbors(xyz, 5);
     }
-    double is_free = voxel[0]; 
-    return (is_free == 1.0) && is_occupied; 
+    return false; 
+
 }
 
 bool TemporalGrid::IsDynamic(const int ixyz[3], bool is_occupied) 
@@ -189,7 +190,7 @@ void TemporalGrid::SetFree(const int ixyz[3], float is_free)
 void TemporalGrid::SetFree(const int ind, float is_free) 
 {
     std::vector<double> temporal_info = this->ReadValue(ind);
-    temporal_info[0] = is_free;
+    temporal_info = {is_free, 0.0, 0.0, timestamp_, timestamp_, timestamp_};
     this->WriteValue(ind, temporal_info);
 }
 
