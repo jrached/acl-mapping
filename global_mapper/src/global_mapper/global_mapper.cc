@@ -1,12 +1,11 @@
 // Copyright 2017 Massachusetts Institute of Technology
 
 #include "occupancy_grid/occupancy_grid.h"
-
 #include "global_mapper/global_mapper.h"
 
 // TODO: Make occupancy thresholds parameters
-float OCCUPIED_THRESH = 5.0; 
-float UNOCCUPIED_THRESH = 0.1;
+float OCCUPIED_THRESH = 3.0; 
+float UNOCCUPIED_THRESH = 1.0;
 
 
 namespace global_mapper

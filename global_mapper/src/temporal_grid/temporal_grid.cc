@@ -14,12 +14,12 @@ TemporalGrid::TemporalGrid(const double origin[3], const double world_dimensions
 void TemporalGrid::UpdateTemporalInfo(const int ind, const bool is_occupied, const bool is_unknown, const double timestamp)
 {
 
+    std::vector temporal_info = this->ReadValue(ind); // {is_free, occupied_ruation, unoccupied_ruation, last_occupied_time, last_unoccupied_time}
     if (is_unknown == false)
     {
         timestamp_ = timestamp;
 
         // Initialize temporal grid voxels 
-        std::vector temporal_info = this->ReadValue(ind); // {is_free, occupied_ruation, unoccupied_ruation, last_occupied_time, last_unoccupied_time}
         if (temporal_info.size() == 0) 
         {
             temporal_info = {0.0, 0.0, 0.0, timestamp, timestamp, timestamp};
@@ -57,6 +57,11 @@ void TemporalGrid::UpdateTemporalInfo(const int ind, const bool is_occupied, con
 
         temporal_info = {is_free, occupied_duration, unoccupied_duration, last_occupied_time, last_unoccupied_time, start_time};
         this->WriteValue(ind, temporal_info);
+    }
+    else 
+    {
+            temporal_info = {0.0, 0.0, 0.0, timestamp, timestamp, timestamp};
+            this->WriteValue(ind, temporal_info); 
     }
 }
 
@@ -105,7 +110,6 @@ float TemporalGrid::NearestNeighbors(const double xyz[3], int neigh_thresh)
             // If enough neighbors are not free space, this voxel must be static
             if (not_free_neigh_counter >= neigh_thresh) 
             {
-                this->SetFree(xyz, 0.0);
                 return 0.0;
             }
         }
@@ -121,7 +125,7 @@ bool TemporalGrid::IsDynamic(const int ind, bool is_occupied)
     {
         double xyz[3];
         this->IndexToWorld(ind, xyz);
-        return this->NearestNeighbors(xyz, 5);
+        return this->NearestNeighbors(xyz, 1);
     }
     return false; 
 
@@ -199,24 +203,10 @@ void TemporalGrid::PostShiftOrigin(const std::vector<int>& slice_indexes)
     // Reinitialize incoming voxels
     for (const int index : slice_indexes)
     {
-        std::vector temporal_info = this->ReadValue(index); 
-        if (temporal_info.size() != 0) 
-        {
-            double last_occupied_time = temporal_info[3], 
-                last_unoccupied_time = temporal_info[4], 
-                start_time = temporal_info[5];
-            double timestamp = timestamp_;
-            temporal_info = {0.0, 0.0, 0.0, timestamp, timestamp, timestamp};
-            this->WriteValue(index, temporal_info); 
-            std::vector<double> temp= this->ReadValue(index); 
-        }
-        else 
-        {
-            double timestamp = timestamp_;
-            temporal_info = {0.0, 0.0, 0.0, timestamp, timestamp, timestamp};
-            this->WriteValue(index, temporal_info); 
-
-        }
+        double timestamp = timestamp_;
+        std::vector<double> temporal_info;
+        temporal_info = {0.0, 0.0, 0.0, timestamp, timestamp, timestamp};
+        this->WriteValue(index, temporal_info); 
     }
 }
 

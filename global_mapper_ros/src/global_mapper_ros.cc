@@ -179,7 +179,7 @@ namespace global_mapper_ros
     // i dont understand why this was commented out
     // planning_grids_pub_ = pnh_.advertise<global_mapper_ros::PlanningGrids>("planning_grids", 1);
 
-    grid_pub_timer_ = this->create_wall_timer(std::chrono::milliseconds(50), std::bind(&GlobalMapperRos::Publish, this));
+    grid_pub_timer_ = this->create_wall_timer(std::chrono::milliseconds(20), std::bind(&GlobalMapperRos::Publish, this));
   }
 
   void GlobalMapperRos::PopulateUnknownPointCloudMsg(const voxel_grid::VoxelGrid<float> &occupancy_grid,
