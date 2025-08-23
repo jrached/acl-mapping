@@ -281,7 +281,7 @@ namespace global_mapper
   void GlobalMapper::Spin()
   {
     static int spincount = 0;
-    while (true) // TODO: Switch back to while loop!
+    while (true) 
     {
       std::unique_lock<std::mutex> data_lock(data_mutex_);
       condition_.wait(data_lock, [this]

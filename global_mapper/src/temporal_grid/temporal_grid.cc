@@ -13,12 +13,10 @@ TemporalGrid::TemporalGrid(const double origin[3], const double world_dimensions
 
 void TemporalGrid::UpdateTemporalInfo(const int ind, const bool is_occupied, const bool is_unknown, const double timestamp)
 {
-
+    timestamp_ = timestamp;
     std::vector temporal_info = this->ReadValue(ind); // {is_free, occupied_ruation, unoccupied_ruation, last_occupied_time, last_unoccupied_time}
     if (is_unknown == false)
     {
-        timestamp_ = timestamp;
-
         // Initialize temporal grid voxels 
         if (temporal_info.size() == 0) 
         {
@@ -85,50 +83,43 @@ void TemporalGrid::UpdateTemporalInfo(const double xyz[3], const bool is_occupie
     }
 }
 
-// TODO: implement with KD-Tree (more efficient without kd-trees?)
-float TemporalGrid::NearestNeighbors(const double xyz[3], int neigh_thresh)
+bool TemporalGrid::AreNeighborsStatic(const double xyz[3], int neigh_thresh)
 {
-    // // If free and occupied (i.e. either dynamic or noise)
     std::vector<double> temporal_info = this->GetTemporalInfo(xyz);
     int not_free_neigh_counter = 0;
     double neigh_xyz[3]; 
-    if (temporal_info[0] == 1.0) 
+    for (const auto offset : offsets_) 
     {
-        for (const auto offset : offsets_) 
+        neigh_xyz[0] = xyz[0] + offset[0];
+        neigh_xyz[1] = xyz[1] + offset[1];
+        neigh_xyz[2] = xyz[2] + offset[2];
+        
+        // Check whether neighbors are not free space
+        temporal_info = this->GetTemporalInfo(neigh_xyz);
+        if (temporal_info.size() != 0 && temporal_info[0] == 0.0) 
         {
-            neigh_xyz[0] = xyz[0] + offset[0];
-            neigh_xyz[1] = xyz[1] + offset[1];
-            neigh_xyz[2] = xyz[2] + offset[2];
-            
-            // Check whether neighbors are not free space
-            temporal_info = this->GetTemporalInfo(neigh_xyz);
-            if (temporal_info.size() != 0 && temporal_info[0] == 0.0) 
-            {
-                not_free_neigh_counter++;
-            }
-
-            // If enough neighbors are not free space, this voxel must be static
-            if (not_free_neigh_counter >= neigh_thresh) 
-            {
-                return 0.0;
-            }
+            not_free_neigh_counter++;
         }
-        return 1.0; // If voxel is occupied free space and not enough neighbors are static, then it must be dynamic
+
+        // If enough neighbors are not free space, this voxel is probably static
+        if (not_free_neigh_counter >= neigh_thresh) 
+        {
+            return true;
+        }
     }
-    return temporal_info[0];
+    return false; // If voxel is occupied free space and not enough neighbors are static, then it is probably dynamic
 }
 
 bool TemporalGrid::IsDynamic(const int ind, bool is_occupied) 
 {
     std::vector<double> voxel = this->ReadValue(ind);
-    if (voxel.size() != 0 && is_occupied)
+    if (voxel.size() != 0 && voxel[0] == 1.0 && is_occupied) // If free and occupied (i.e. either dynamic or noise)
     {
         double xyz[3];
         this->IndexToWorld(ind, xyz);
-        return this->NearestNeighbors(xyz, 1);
+        return !this->AreNeighborsStatic(xyz, 1); // Filter out noise 
     }
     return false; 
-
 }
 
 bool TemporalGrid::IsDynamic(const int ixyz[3], bool is_occupied) 

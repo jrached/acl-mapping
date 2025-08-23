@@ -19,7 +19,7 @@ public:
     TemporalGrid(const double origin[3], const double world_dimensions[3], const float resolution, float occupied_threshold, float unoccupied_threshold);
     void UpdateTemporalInfo(const int ixyz[3], const bool is_occupied, const bool is_unknown, const double timestamp); 
     void UpdateTemporalInfo(const double xyz[3], const bool is_occupied, const bool is_unknown, const double timestamp); 
-    float NearestNeighbors(const double xyz[3], int neigh_thresh);
+    bool AreNeighborsStatic(const double xyz[3], int neigh_thresh);
     bool IsDynamic(const int ixyz[3], bool is_occupied); 
     bool IsDynamic(const double xyz[3], bool is_occupied);
     std::vector<double> GetTemporalInfo(const int ixyz[3]) const;

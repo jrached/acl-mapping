@@ -525,12 +525,12 @@ namespace global_mapper_ros
         for (int z = 0; z < grid_dimensions[2]; z++)
         {
           int ixyz[3] = {x, y, z};
-          float occupancy_value = occupancy_grid.ReadValue(ixyz);
+          occupancy_grid.GridToWorld(ixyz, xyz);
+          float occupancy_value = occupancy_grid.ReadValue(xyz);
           bool is_occupied = global_mapper_ptr_->occupancy_grid_.IsOccupied(occupancy_value); 
-          bool is_dynamic = global_mapper_ptr_->temporal_grid_.IsDynamic(ixyz, is_occupied);
-          if (global_mapper_ptr_->temporal_grid_.GetTemporalInfo(ixyz).size() != 0 && is_occupied)
+          bool is_dynamic = global_mapper_ptr_->temporal_grid_.IsDynamic(xyz, is_occupied);
+          if (is_occupied)
           {
-            occupancy_grid.GridToWorld(ixyz, xyz);
             if (is_dynamic)
             {
               if (xyz[2] > params_.z_ground) // only publish points above the ground
