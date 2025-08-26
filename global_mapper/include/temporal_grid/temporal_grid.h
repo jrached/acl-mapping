@@ -40,19 +40,15 @@ private:
     float unoccupied_threshold_; 
     float resolution_;
     double timestamp_;
-    std::vector<std::vector<double>> offsets_;
+    std::vector<std::vector<int>> offsets_;
 
-    inline static std::vector<std::vector<double>> generateOffsets(double res = 0.3, int infla = 1) 
+    inline static std::vector<std::vector<int>> generateOffsets(int infla = 1) 
     {
-        double lim = res * infla;
-        double res_step = res;
-        lim = 1.0;
-        res_step = 1.0;
-        std::vector<std::vector<double>> offsets;
-        for (double dx= -lim; dx <= lim; dx += res_step){
-            for (double dy= -lim; dy <= lim; dy += res_step) {
-                for (double dz= -lim; dz <= lim; dz += res_step){
-                    std::vector<double> offsets_elem; 
+        std::vector<std::vector<int>> offsets;
+        for (int dx= -infla; dx <= infla; ++dx){
+            for (int dy= -infla; dy <= infla; ++dy) {
+                for (int dz= -infla; dz <= infla; ++dz){
+                    std::vector<int> offsets_elem; 
                     offsets_elem.push_back(dx);
                     offsets_elem.push_back(dy);
                     offsets_elem.push_back(dz);

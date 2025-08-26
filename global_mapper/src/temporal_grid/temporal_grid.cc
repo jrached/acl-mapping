@@ -8,7 +8,7 @@ namespace temporal_grid
 TemporalGrid::TemporalGrid(const double origin[3], const double world_dimensions[3], const float resolution, float occupied_threshold, float unoccupied_threshold) 
 : voxel_grid::VoxelGrid<std::vector<double>>(origin, world_dimensions, resolution), occupied_threshold_(occupied_threshold), unoccupied_threshold_(unoccupied_threshold), resolution_(resolution)
 {
-    offsets_ = this->generateOffsets(resolution_);
+    offsets_ = this->generateOffsets();
 }
 
 void TemporalGrid::UpdateTemporalInfo(const int ind, const bool is_occupied, const bool is_unknown, const double timestamp)
@@ -55,27 +55,13 @@ void TemporalGrid::UpdateTemporalInfo(const int ind, const bool is_occupied, con
 
         temporal_info = {is_free, occupied_duration, unoccupied_duration, last_occupied_time, last_unoccupied_time, start_time};
         this->WriteValue(ind, temporal_info);
-
-        if (this->IsDynamic(ind, is_occupied))
-        {
-            double xyz[3];
-            this->IndexToWorld(ind, xyz);
-            if (xyz[2] > 0.5)
-            {
-                // if (occupied_duration > 0.0)
-                if (true)
-                {
-                    std::cout << "Dynamic voxel (" << xyz[0] << ", " << xyz[1] << ", " << xyz[2] << ") with alive duration: " << timestamp - start_time << " and occupied duration: " << occupied_duration << std::endl;
-                }
-            }
-        }
     }
     else 
     {
-            temporal_info = {0.0, 0.0, 0.0, timestamp, timestamp, timestamp};
-            this->WriteValue(ind, temporal_info); 
-            return;
-        }
+        temporal_info = {0.0, 0.0, 0.0, timestamp, timestamp, timestamp};
+        this->WriteValue(ind, temporal_info); 
+        return;
+    }
 }
 
 void TemporalGrid::UpdateTemporalInfo(const int ixyz[3], const bool is_occupied, const bool is_unknown, const double timestamp)
