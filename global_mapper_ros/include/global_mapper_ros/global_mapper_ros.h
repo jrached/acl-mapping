@@ -58,6 +58,7 @@ class GlobalMapperRos : public rclcpp::Node
 public:
   GlobalMapperRos();
   void Run();
+  double start_time_; 
 
 private:
   void GetParams();

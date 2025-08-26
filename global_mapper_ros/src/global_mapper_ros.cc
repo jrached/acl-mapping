@@ -6,7 +6,7 @@ using namespace std::chrono_literals;
 namespace global_mapper_ros
 {
   GlobalMapperRos::GlobalMapperRos()
-      : Node("global_mapper_ros"), publish_occupancy_grid_(false), publish_distance_grid_(false), publish_cost_grid_(false), publish_path_(false), publish_dynamic_grid_(false), clear_unknown_distance_(0.0), target_altitude_(0.0)
+      : Node("global_mapper_ros"), publish_occupancy_grid_(false), publish_distance_grid_(false), publish_cost_grid_(false), publish_path_(false), publish_dynamic_grid_(false), clear_unknown_distance_(0.0), target_altitude_(0.0), start_time_(this->now().seconds())
   {
 
     // og code did not define buffer for some reason
@@ -512,8 +512,10 @@ namespace global_mapper_ros
       return;
     }
 
+    std::unique_lock<std::mutex> lock(global_mapper_ptr_->output_mutex_);
+
     int grid_dimensions[3];
-    occupancy_grid.GetGridDimensions(grid_dimensions);
+    global_mapper_ptr_->occupancy_grid_.GetGridDimensions(grid_dimensions);
 
     double xyz[3] = {0.0};
     pcl::PointCloud<pcl::PointXYZ> dynamic_cloud;
@@ -525,16 +527,17 @@ namespace global_mapper_ros
         for (int z = 0; z < grid_dimensions[2]; z++)
         {
           int ixyz[3] = {x, y, z};
-          occupancy_grid.GridToWorld(ixyz, xyz);
-          float occupancy_value = occupancy_grid.ReadValue(xyz);
+          float occupancy_value = global_mapper_ptr_->occupancy_grid_.ReadValue(ixyz);
           bool is_occupied = global_mapper_ptr_->occupancy_grid_.IsOccupied(occupancy_value); 
-          bool is_dynamic = global_mapper_ptr_->temporal_grid_.IsDynamic(xyz, is_occupied);
+          bool is_dynamic = global_mapper_ptr_->temporal_grid_.IsDynamic(ixyz, is_occupied);
           if (is_occupied)
           {
+            global_mapper_ptr_->occupancy_grid_.GridToWorld(ixyz, xyz);
             if (is_dynamic)
             {
               if (xyz[2] > params_.z_ground) // only publish points above the ground
               {
+                // std::cout << "Dynamic voxel (" << xyz[0] << ", " << xyz[1] << ", " << xyz[2] << " with timestamp: " << this->now().seconds() - start_time_ << std::endl;
                 dynamic_cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
               }
             }
@@ -549,6 +552,8 @@ namespace global_mapper_ros
         }
       }
     }
+
+    lock.unlock();
 
     // RCLCPP_INFO(this->get_logger(), "  [Occupancy] found %zu occupied cells", dynamic_cloud.size());
     pcl::toROSMsg(dynamic_cloud, *dynamic_pointcloud);
@@ -690,7 +695,7 @@ namespace global_mapper_ros
       const sensor_msgs::msg::PointCloud2::ConstSharedPtr &cloud_msg)
   {
     // 1) Receipt log
-    RCLCPP_INFO(this->get_logger(), "Mapper:: PointCloud received");
+    // RCLCPP_INFO(this->get_logger(), "Mapper:: PointCloud received"); // TODO: Uncomment
     if (!got_depth_image_)
     {
       got_depth_image_ = true;
@@ -702,7 +707,7 @@ namespace global_mapper_ros
     auto in = std::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
     in->points.reserve(tmp.size());
 
-    std::cout << "In PointCloudCallback, tmp.size()=" << tmp.size() << std::endl;
+    // std::cout << "In PointCloudCallback, tmp.size()=" << tmp.size() << std::endl; // TODO: Uncomment
 
     for (const auto &pt : tmp.points)
     {

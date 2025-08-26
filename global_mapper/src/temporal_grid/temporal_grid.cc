@@ -46,7 +46,7 @@ void TemporalGrid::UpdateTemporalInfo(const int ind, const bool is_occupied, con
         // Segment free and not free space 
         if (unoccupied_duration > unoccupied_threshold_) 
         {
-            is_free = 1.0; 
+            is_free = 1.0;
         }
         if (occupied_duration > occupied_threshold_) 
         {
@@ -55,12 +55,27 @@ void TemporalGrid::UpdateTemporalInfo(const int ind, const bool is_occupied, con
 
         temporal_info = {is_free, occupied_duration, unoccupied_duration, last_occupied_time, last_unoccupied_time, start_time};
         this->WriteValue(ind, temporal_info);
+
+        if (this->IsDynamic(ind, is_occupied))
+        {
+            double xyz[3];
+            this->IndexToWorld(ind, xyz);
+            if (xyz[2] > 0.5)
+            {
+                // if (occupied_duration > 0.0)
+                if (true)
+                {
+                    std::cout << "Dynamic voxel (" << xyz[0] << ", " << xyz[1] << ", " << xyz[2] << ") with alive duration: " << timestamp - start_time << " and occupied duration: " << occupied_duration << std::endl;
+                }
+            }
+        }
     }
     else 
     {
             temporal_info = {0.0, 0.0, 0.0, timestamp, timestamp, timestamp};
             this->WriteValue(ind, temporal_info); 
-    }
+            return;
+        }
 }
 
 void TemporalGrid::UpdateTemporalInfo(const int ixyz[3], const bool is_occupied, const bool is_unknown, const double timestamp)
@@ -83,16 +98,16 @@ void TemporalGrid::UpdateTemporalInfo(const double xyz[3], const bool is_occupie
     }
 }
 
-bool TemporalGrid::AreNeighborsStatic(const double xyz[3], int neigh_thresh)
+bool TemporalGrid::AreNeighborsStatic(const int ixyz[3], int neigh_thresh)
 {
-    std::vector<double> temporal_info = this->GetTemporalInfo(xyz);
+    std::vector<double> temporal_info = this->GetTemporalInfo(ixyz);
     int not_free_neigh_counter = 0;
-    double neigh_xyz[3]; 
+    int neigh_xyz[3]; 
     for (const auto offset : offsets_) 
     {
-        neigh_xyz[0] = xyz[0] + offset[0];
-        neigh_xyz[1] = xyz[1] + offset[1];
-        neigh_xyz[2] = xyz[2] + offset[2];
+        neigh_xyz[0] = ixyz[0] + offset[0];
+        neigh_xyz[1] = ixyz[1] + offset[1];
+        neigh_xyz[2] = ixyz[2] + offset[2];
         
         // Check whether neighbors are not free space
         temporal_info = this->GetTemporalInfo(neigh_xyz);
@@ -115,9 +130,10 @@ bool TemporalGrid::IsDynamic(const int ind, bool is_occupied)
     std::vector<double> voxel = this->ReadValue(ind);
     if (voxel.size() != 0 && voxel[0] == 1.0 && is_occupied) // If free and occupied (i.e. either dynamic or noise)
     {
-        double xyz[3];
-        this->IndexToWorld(ind, xyz);
-        return !this->AreNeighborsStatic(xyz, 1); // Filter out noise 
+        int ixyz[3];
+        this->IndexToGrid(ind, ixyz); // TODO: Convert to grid indices instead 
+        return !this->AreNeighborsStatic(ixyz, 1); // Filter out noise 
+        return true;
     }
     return false; 
 }

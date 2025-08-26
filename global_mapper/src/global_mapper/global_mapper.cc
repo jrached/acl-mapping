@@ -281,7 +281,7 @@ namespace global_mapper
   void GlobalMapper::Spin()
   {
     static int spincount = 0;
-    while (true) 
+    while (true) // TODO switch back to loop 
     {
       std::unique_lock<std::mutex> data_lock(data_mutex_);
       condition_.wait(data_lock, [this]
@@ -289,7 +289,7 @@ namespace global_mapper
       data_lock.unlock();
 
       std::unique_lock<std::mutex> output_lock(output_mutex_);
-
+ 
       origin_mutex_.lock();
       occupancy_grid_.UpdateOrigin(origin_);
       // distance_grid_.UpdateOrigin(origin_);
@@ -311,8 +311,9 @@ namespace global_mapper
 
   void GlobalMapper::Run()
   {
-    fprintf(stderr, "GlobalMapper::Run\n");
+    // fprintf(stderr, "GlobalMapper::Run\n");
     thread_ = std::thread(&GlobalMapper::Spin, this);
+    // this->Spin();
   }
 
 } // namespace global_mapper

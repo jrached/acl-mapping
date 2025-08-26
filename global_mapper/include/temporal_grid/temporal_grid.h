@@ -19,7 +19,7 @@ public:
     TemporalGrid(const double origin[3], const double world_dimensions[3], const float resolution, float occupied_threshold, float unoccupied_threshold);
     void UpdateTemporalInfo(const int ixyz[3], const bool is_occupied, const bool is_unknown, const double timestamp); 
     void UpdateTemporalInfo(const double xyz[3], const bool is_occupied, const bool is_unknown, const double timestamp); 
-    bool AreNeighborsStatic(const double xyz[3], int neigh_thresh);
+    bool AreNeighborsStatic(const int ixyz[3], int neigh_thresh);
     bool IsDynamic(const int ixyz[3], bool is_occupied); 
     bool IsDynamic(const double xyz[3], bool is_occupied);
     std::vector<double> GetTemporalInfo(const int ixyz[3]) const;
@@ -46,6 +46,8 @@ private:
     {
         double lim = res * infla;
         double res_step = res;
+        lim = 1.0;
+        res_step = 1.0;
         std::vector<std::vector<double>> offsets;
         for (double dx= -lim; dx <= lim; dx += res_step){
             for (double dy= -lim; dy <= lim; dy += res_step) {
@@ -58,6 +60,7 @@ private:
                 }
             }
         }
+        std::cout << "Size of offsets: " << offsets.size() << std::endl;
         return offsets;
     } 
 };

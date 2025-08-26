@@ -53,6 +53,9 @@ public:
   temporal_grid::TemporalGrid temporal_grid_;
   double timestamp_;
 
+  std::mutex output_mutex_; // TODO Move back to private
+
+
 private:
   const PointCloud::ConstPtr PopPointCloud();
   void InsertPointCloud(const PointCloud::ConstPtr& point_cloud);
@@ -66,7 +69,7 @@ private:
   std::deque<double> timestamp_buffer_;
 
   std::mutex cloud_mutex_;
-  std::mutex output_mutex_;
+  // std::mutex output_mutex_;
   std::mutex data_mutex_;
   std::mutex origin_mutex_;
   std::mutex planner_mutex_;
