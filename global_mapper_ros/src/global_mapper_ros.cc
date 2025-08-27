@@ -14,7 +14,8 @@ namespace global_mapper_ros
     tf_listener_ptr_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_ptr_);
     name_drone = this->get_namespace();
     name_drone.erase(std::remove(name_drone.begin(), name_drone.end(), '/'), name_drone.end()); // remove slashes
-    lidar_frame_ = name_drone + "/" + name_drone + "_livox";
+    // lidar_frame_ = name_drone + "/" + name_drone + "_livox";
+    lidar_frame_ = name_drone + "/init_pose";
   }
 
   void GlobalMapperRos::GetParams()
@@ -196,6 +197,7 @@ namespace global_mapper_ros
 
     try
     {
+      // std::cout << "Lidar frame: " << lidar_frame_ << std::endl;
       transform_stamped = tf_buffer_ptr_->lookupTransform(params_.global_frame, lidar_frame_, rclcpp::Time(0), 20ms);
       transform(0) = transform_stamped.transform.translation.x;
       transform(1) = transform_stamped.transform.translation.y;
@@ -727,8 +729,14 @@ namespace global_mapper_ros
       tf_stamped = tf_buffer_ptr_->lookupTransform(
           target_frame,
           cloud_msg->header.frame_id,
-          rclcpp::Time(cloud_msg->header.stamp),
+          rclcpp::Time(0),
           rclcpp::Duration(std::chrono::milliseconds(20)));
+
+      // Eigen::Vector3d pos = tf_stamped.transform.translation; 
+      // auto quat = tf_stamped.transform.rotation;
+
+      std::cout << "transform position: (" << tf_stamped.transform.translation.x << ", " << tf_stamped.transform.translation.y << ", " << tf_stamped.transform.translation.z << ")" << std::endl;
+      std::cout << "transform orientation: (" << tf_stamped.transform.rotation.x << ", " << tf_stamped.transform.rotation.y << ", " << tf_stamped.transform.rotation.z << ", " << tf_stamped.transform.rotation.w << ")" << std::endl; 
     }
     catch (const tf2::TransformException &ex)
     {
