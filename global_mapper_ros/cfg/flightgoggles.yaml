@@ -2,7 +2,8 @@
   ros__parameters:
 
     # global_frame: world
-    origin: [1.07, -2.98, 0.82]  # [m]
+    # origin: [1.07, -2.98, 0.82]  # [m]
+    origin: [1.53, -3.17, 0.82]  # [m]
     # world_dimensions: [14.0, 14.0, 10.0]  # [m]  16   16   4
     world_dimensions: [16.0, 16.0, 10.0]  # [m]  16   16   4
     # world_dimensions: [20.0, 20.0, 10.0]  # [m]  16   16   4
