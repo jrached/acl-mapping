@@ -6,7 +6,7 @@ using namespace std::chrono_literals;
 namespace global_mapper_ros
 {
   GlobalMapperRos::GlobalMapperRos()
-      : Node("global_mapper_ros"), publish_occupancy_grid_(false), publish_distance_grid_(false), publish_cost_grid_(false), publish_path_(false), publish_dynamic_grid_(false), clear_unknown_distance_(0.0), target_altitude_(0.0), start_time_(this->now().seconds())
+      : Node("global_mapper_ros"), publish_occupancy_grid_(false), publish_distance_grid_(false), publish_cost_grid_(false), publish_path_(false), publish_dynamic_grid_(false), clear_unknown_distance_(0.0), target_altitude_(0.0), start_time_(this->now().seconds()), cloud_(new pcl::PointCloud<pcl::PointXYZ>)
   {
 
     // og code did not define buffer for some reason
@@ -17,6 +17,10 @@ namespace global_mapper_ros
     // lidar_frame_ = name_drone + "/" + name_drone + "_livox";
     lidar_frame_ = name_drone + "/init_pose";
     drone_frame_id_ = name_drone + "/base_link";
+
+    // Instantiate cloud pointer to empty cloud message 
+    const sensor_msgs::msg::PointCloud2::SharedPtr cloud_msg_ = std::make_shared<sensor_msgs::msg::PointCloud2>();
+
   }
 
   void GlobalMapperRos::GetParams()
@@ -225,7 +229,6 @@ namespace global_mapper_ros
     // pcl::PointCloud<pcl::PointXYZ> cloud_frontier;
     double origin[3];
     occupancy_grid.GetOrigin(origin);
-    std::cout << "Origin: " << origin[0] << ", " << origin[1] << ", " << origin[2] << " " << std::endl;
     int counter = 0;
     // std::cout << "In PopulateUnknownPointCloudMsg, origin=" << origin[0] << ", " << origin[1] << ", " << origin[2]
     //           << std::endl;
@@ -506,9 +509,9 @@ namespace global_mapper_ros
   }
 
   void GlobalMapperRos::PopulateDynamicPointCloudMsg(const voxel_grid::VoxelGrid<float>& occupancy_grid, 
-                          const voxel_grid::VoxelGrid<std::vector<double>>& temporal_grid, 
-                          sensor_msgs::msg::PointCloud2* dynamic_pointcloud,
-                          sensor_msgs::msg::PointCloud2* static_pointcloud)
+                                                     const voxel_grid::VoxelGrid<std::vector<double>>& temporal_grid, 
+                                                     sensor_msgs::msg::PointCloud2* dynamic_pointcloud,
+                                                     sensor_msgs::msg::PointCloud2* static_pointcloud)
   {
      // check for bad input
     if (dynamic_pointcloud == nullptr || static_pointcloud == nullptr)
@@ -516,50 +519,67 @@ namespace global_mapper_ros
       return;
     }
 
+    // /////////////// START NEW /////////////////////////////////////////
+
+    // Convert PointCloud2 to PCL format
+    // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+    // pcl::fromROSMsg(*cloud_msg_, *cloud);
+
+    // Remove NaN values from the cloud
+    std::vector<int> indices;
+    pcl::removeNaNFromPointCloud(*cloud_, *cloud_, indices);
+
+    // Voxel grid filtering to downsample the cloud
+    pcl::VoxelGrid<pcl::PointXYZ> vg;
+    vg.setInputCloud(cloud_);
+    // vg.setLeafSize(dynus_map_res_, dynus_map_res_, dynus_map_res_);
+    vg.setLeafSize(0.2, 0.2, 0.2);
+    vg.filter(*cloud_);
+
     std::unique_lock<std::mutex> lock(global_mapper_ptr_->output_mutex_);
 
-    int grid_dimensions[3];
-    global_mapper_ptr_->occupancy_grid_.GetGridDimensions(grid_dimensions);
-
-    double xyz[3] = {0.0};
+    // Declare clouds to be populated 
     pcl::PointCloud<pcl::PointXYZ> dynamic_cloud;
     pcl::PointCloud<pcl::PointXYZ> static_cloud;
-    for (int x = 0; x < grid_dimensions[0]; x++)
+
+    // Populate clouds according to temporal segmentation scheme
+    double xyz[3] = {0.0};
+    int ixyz[3] = {0};
+    for (size_t i = 0; i < cloud_->size(); ++i) 
     {
-      for (int y = 0; y < grid_dimensions[1]; y++)
+      const auto &pt = cloud_->points[i];
+      xyz[0] = pt.x; 
+      xyz[1] = pt.y; 
+      xyz[2] = pt.z; 
+      global_mapper_ptr_->occupancy_grid_.WorldToGrid(xyz, ixyz);
+      float occupancy_value = global_mapper_ptr_->occupancy_grid_.ReadValue(ixyz);
+      bool is_occupied = global_mapper_ptr_->occupancy_grid_.IsOccupied(occupancy_value); 
+      bool is_dynamic = global_mapper_ptr_->temporal_grid_.IsDynamic(ixyz, is_occupied);
+      if (is_occupied)
       {
-        for (int z = 0; z < grid_dimensions[2]; z++)
+        global_mapper_ptr_->occupancy_grid_.GridToWorld(ixyz, xyz);
+        if (is_dynamic)
         {
-          int ixyz[3] = {x, y, z};
-          float occupancy_value = global_mapper_ptr_->occupancy_grid_.ReadValue(ixyz);
-          bool is_occupied = global_mapper_ptr_->occupancy_grid_.IsOccupied(occupancy_value); 
-          bool is_dynamic = global_mapper_ptr_->temporal_grid_.IsDynamic(ixyz, is_occupied);
-          if (is_occupied)
+          if (xyz[2] > params_.z_ground) // only publish points above the ground
           {
-            global_mapper_ptr_->occupancy_grid_.GridToWorld(ixyz, xyz);
-            if (is_dynamic)
-            {
-              if (xyz[2] > params_.z_ground) // only publish points above the ground
-              {
-                // std::cout << "Dynamic voxel (" << xyz[0] << ", " << xyz[1] << ", " << xyz[2] << " with timestamp: " << this->now().seconds() - start_time_ << std::endl;
-                dynamic_cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
-              }
-            }
-            else
-            {
-              if (xyz[2] > params_.z_ground) // only publish points above the ground
-              {
-                static_cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
-              }
-            }
+            // std::cout << "Dynamic voxel (" << xyz[0] << ", " << xyz[1] << ", " << xyz[2] << " with timestamp: " << this->now().seconds() - start_time_ << std::endl;
+            dynamic_cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
+          }
+        }
+        else
+        {
+          if (xyz[2] > params_.z_ground) // only publish points above the ground
+          {
+            static_cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
           }
         }
       }
+
     }
 
     lock.unlock();
 
-    // RCLCPP_INFO(this->get_logger(), "  [Occupancy] found %zu occupied cells", dynamic_cloud.size());
+    // Publish clouds 
     pcl::toROSMsg(dynamic_cloud, *dynamic_pointcloud);
     dynamic_pointcloud->header.frame_id = "map";
     dynamic_pointcloud->header.stamp = rclcpp::Clock().now();
@@ -567,6 +587,61 @@ namespace global_mapper_ros
     pcl::toROSMsg(static_cloud, *static_pointcloud);
     static_pointcloud->header.frame_id = "map";
     static_pointcloud->header.stamp = rclcpp::Clock().now();
+
+    // /////////////// END NEW /////////////////////////////////////////
+
+
+    // std::unique_lock<std::mutex> lock(global_mapper_ptr_->output_mutex_);
+
+    // int grid_dimensions[3];
+    // global_mapper_ptr_->occupancy_grid_.GetGridDimensions(grid_dimensions);
+
+    // double xyz[3] = {0.0};
+    // pcl::PointCloud<pcl::PointXYZ> dynamic_cloud;
+    // pcl::PointCloud<pcl::PointXYZ> static_cloud;
+    // for (int x = 0; x < grid_dimensions[0]; x++)
+    // {
+    //   for (int y = 0; y < grid_dimensions[1]; y++)
+    //   {
+    //     for (int z = 0; z < grid_dimensions[2]; z++)
+    //     {
+    //       int ixyz[3] = {x, y, z};
+    //       float occupancy_value = global_mapper_ptr_->occupancy_grid_.ReadValue(ixyz);
+    //       bool is_occupied = global_mapper_ptr_->occupancy_grid_.IsOccupied(occupancy_value); 
+    //       bool is_dynamic = global_mapper_ptr_->temporal_grid_.IsDynamic(ixyz, is_occupied);
+    //       if (is_occupied)
+    //       {
+    //         global_mapper_ptr_->occupancy_grid_.GridToWorld(ixyz, xyz);
+    //         if (is_dynamic)
+    //         {
+    //           if (xyz[2] > params_.z_ground) // only publish points above the ground
+    //           {
+    //             // std::cout << "Dynamic voxel (" << xyz[0] << ", " << xyz[1] << ", " << xyz[2] << " with timestamp: " << this->now().seconds() - start_time_ << std::endl;
+    //             dynamic_cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
+    //           }
+    //         }
+    //         else
+    //         {
+    //           if (xyz[2] > params_.z_ground) // only publish points above the ground
+    //           {
+    //             static_cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
+    //           }
+    //         }
+    //       }
+    //     }
+    //   }
+    // }
+
+    // lock.unlock();
+
+    // RCLCPP_INFO(this->get_logger(), "  [Occupancy] found %zu occupied cells", dynamic_cloud.size());
+    // pcl::toROSMsg(dynamic_cloud, *dynamic_pointcloud);
+    // dynamic_pointcloud->header.frame_id = "map";
+    // dynamic_pointcloud->header.stamp = rclcpp::Clock().now();
+
+    // pcl::toROSMsg(static_cloud, *static_pointcloud);
+    // static_pointcloud->header.frame_id = "map";
+    // static_pointcloud->header.stamp = rclcpp::Clock().now();
 
     // I (Jesus) changed the stamp so that it is the same as the last point cloud used in this map
     // pointcloud->header.stamp = tstampLastPclFused_;
@@ -699,12 +774,9 @@ namespace global_mapper_ros
     }
     Eigen::Matrix4f mat_f = mat_d.cast<float>();
 
-    // TODO: Transform pose to global frame 
+    // Transform pose to global frame 
     Eigen::Vector4f xyz_homo(pose_ptr->pos.x, pose_ptr->pos.y, pose_ptr->pos.z, 1.0f);
     Eigen::Vector4f xyz_global = mat_f * xyz_homo;
-
-    std::cout << "Drone frame id: " << drone_frame_id_ << std::endl;
-    std::cout << "xyz_global: " << xyz_global << std::endl;
 
     // double xyz[3] = {pose_ptr->pos.x, pose_ptr->pos.y, pose_ptr->pos.z};
     double xyz[3] = {xyz_global[0], xyz_global[1], xyz_global[2]};
@@ -741,6 +813,10 @@ namespace global_mapper_ros
   void GlobalMapperRos::PointCloudCallback(
       const sensor_msgs::msg::PointCloud2::ConstSharedPtr &cloud_msg)
   {
+    // 0) Assign cloud to cloud pointer 
+    // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_(new pcl::PointCloud<pcl::PointXYZ>);
+    // pcl::fromROSMsg(*cloud_msg, *cloud_);
+
     // 1) Receipt log
     // RCLCPP_INFO(this->get_logger(), "Mapper:: PointCloud received"); // TODO: Uncomment
     if (!got_depth_image_)
@@ -829,6 +905,10 @@ namespace global_mapper_ros
 
     // 8) Update last-fused timestamp
     tstampLastPclFused_ = cloud_msg->header.stamp;
+
+    // 9) Copy cloud pointer 
+    pcl::copyPointCloud(*world_cloud, *cloud_);
+    // cloud_ = world_cloud;
   }
 
   void GlobalMapperRos::Run()

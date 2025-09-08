@@ -19,6 +19,7 @@
 #include <pcl/point_cloud.h>      // pcl::PointCloud<T>
 #include <pcl/point_types.h>      // pcl::PointXYZ, pcl::PointXYZI, etc.
 #include <pcl_conversions/pcl_conversions.h>  // between sensor_msgs and PCL
+#include <pcl/filters/voxel_grid.h>
 
 // ROS 2 core
 #include <rclcpp/rclcpp.hpp>
@@ -73,9 +74,9 @@ private:
   void PopulateCostPointCloudMsg(const voxel_grid::VoxelGrid<int>& cost_grid, sensor_msgs::msg::PointCloud2* pointcloud);
   void PopulatePathMsg(const std::vector<std::array<double, 3>>& path, nav_msgs::msg::Path* path_msg);
   void PopulateDynamicPointCloudMsg(const voxel_grid::VoxelGrid<float>& occupancy_grid, 
-                           const voxel_grid::VoxelGrid<std::vector<double>>& temporal_grid, 
-                           sensor_msgs::msg::PointCloud2* dynamic_pointcloud,
-                           sensor_msgs::msg::PointCloud2* static_pointcloud);
+                                    const voxel_grid::VoxelGrid<std::vector<double>>& temporal_grid, 
+                                    sensor_msgs::msg::PointCloud2* dynamic_pointcloud,
+                                    sensor_msgs::msg::PointCloud2* static_pointcloud);
   void Publish();
 
   // callbacks
@@ -142,5 +143,10 @@ private:
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_ptr_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_ptr_;
   std::shared_ptr<image_transport::ImageTransport> it_ptr_;
+
+
+  // Ros pointcloud message pointer 
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_;
+
 };
 }  // namespace global_mapper_ros
