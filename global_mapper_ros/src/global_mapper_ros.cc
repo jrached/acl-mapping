@@ -521,10 +521,6 @@ namespace global_mapper_ros
 
     // /////////////// START NEW /////////////////////////////////////////
 
-    // Convert PointCloud2 to PCL format
-    // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
-    // pcl::fromROSMsg(*cloud_msg_, *cloud);
-
     // Remove NaN values from the cloud
     std::vector<int> indices;
     pcl::removeNaNFromPointCloud(*cloud_, *cloud_, indices);
@@ -562,7 +558,6 @@ namespace global_mapper_ros
         {
           if (xyz[2] > params_.z_ground) // only publish points above the ground
           {
-            // std::cout << "Dynamic voxel (" << xyz[0] << ", " << xyz[1] << ", " << xyz[2] << " with timestamp: " << this->now().seconds() - start_time_ << std::endl;
             dynamic_cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
           }
         }
@@ -651,6 +646,7 @@ namespace global_mapper_ros
   // might be good to add more debug warnings, e.g dense and sparse paths are emtpy
   void GlobalMapperRos::Publish()
   {
+    double prev_time = this->now().seconds();
     // get all maps
     voxel_grid::VoxelGrid<float> occupancy_grid;
     voxel_grid::VoxelGrid<int> distance_grid;
@@ -715,6 +711,9 @@ namespace global_mapper_ros
       dynamic_grid_pub_->publish(dynamic_pointcloud_msg);
       static_grid_pub_->publish(static_pointcloud_msg);
     }
+
+    double duration = 1000 * (this->now().seconds() - prev_time);
+    std::cout << "Mapping + segmentation duration: " << duration << " ms" << std::endl; 
   }
 
   // Callback for Odometry (jackal)
@@ -813,10 +812,6 @@ namespace global_mapper_ros
   void GlobalMapperRos::PointCloudCallback(
       const sensor_msgs::msg::PointCloud2::ConstSharedPtr &cloud_msg)
   {
-    // 0) Assign cloud to cloud pointer 
-    // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_(new pcl::PointCloud<pcl::PointXYZ>);
-    // pcl::fromROSMsg(*cloud_msg, *cloud_);
-
     // 1) Receipt log
     // RCLCPP_INFO(this->get_logger(), "Mapper:: PointCloud received"); // TODO: Uncomment
     if (!got_depth_image_)
@@ -908,7 +903,6 @@ namespace global_mapper_ros
 
     // 9) Copy cloud pointer 
     pcl::copyPointCloud(*world_cloud, *cloud_);
-    // cloud_ = world_cloud;
   }
 
   void GlobalMapperRos::Run()
@@ -968,7 +962,9 @@ namespace global_mapper_ros
 
       rclcpp::spin_some(this->shared_from_this());
       spin_rate.sleep();
-          }
+    }
+
+    
   }
 
 } // namespace global_mapper_ros
