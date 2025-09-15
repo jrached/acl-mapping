@@ -561,15 +561,42 @@ namespace global_mapper_ros
             dynamic_cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
           }
         }
-        else
+      }
+
+    }
+
+    int grid_dimensions[3];
+    global_mapper_ptr_->occupancy_grid_.GetGridDimensions(grid_dimensions);
+
+    xyz[0] = 0.0;
+    xyz[1] = 0.0; 
+    xyz[2] = 0.0;
+    for (int x = 0; x < grid_dimensions[0]; x++)
+    {
+      for (int y = 0; y < grid_dimensions[1]; y++)
+      {
+        for (int z = 0; z < grid_dimensions[2]; z++)
         {
-          if (xyz[2] > params_.z_ground) // only publish points above the ground
+          ixyz[0] = x;
+          ixyz[1] = y;
+          ixyz[2] = z; 
+
+          float occupancy_value = global_mapper_ptr_->occupancy_grid_.ReadValue(ixyz);
+          bool is_occupied = global_mapper_ptr_->occupancy_grid_.IsOccupied(occupancy_value); 
+          bool is_dynamic = global_mapper_ptr_->temporal_grid_.IsDynamic(ixyz, is_occupied);
+          if (is_occupied)
           {
-            static_cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
+            global_mapper_ptr_->occupancy_grid_.GridToWorld(ixyz, xyz);
+            if (!is_dynamic)
+            {
+              if (xyz[2] > params_.z_ground) // only publish points above the ground
+              {
+                static_cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
+              }
+            }
           }
         }
       }
-
     }
 
     lock.unlock();
