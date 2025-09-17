@@ -508,18 +508,16 @@ namespace global_mapper_ros
     }
   }
 
-  void GlobalMapperRos::PopulateDynamicPointCloudMsg(const voxel_grid::VoxelGrid<float>& occupancy_grid, 
+ void GlobalMapperRos::PopulateDynamicPointCloudMsg(const voxel_grid::VoxelGrid<float>& occupancy_grid, 
                                                      const voxel_grid::VoxelGrid<std::vector<double>>& temporal_grid, 
                                                      sensor_msgs::msg::PointCloud2* dynamic_pointcloud,
                                                      sensor_msgs::msg::PointCloud2* static_pointcloud)
-  {
+{
      // check for bad input
     if (dynamic_pointcloud == nullptr || static_pointcloud == nullptr)
     {
       return;
     }
-
-    // /////////////// START NEW /////////////////////////////////////////
 
     // Remove NaN values from the cloud
     std::vector<int> indices;
@@ -541,28 +539,38 @@ namespace global_mapper_ros
     // Populate clouds according to temporal segmentation scheme
     double xyz[3] = {0.0};
     int ixyz[3] = {0};
-    for (size_t i = 0; i < cloud_->size(); ++i) 
-    {
-      const auto &pt = cloud_->points[i];
-      xyz[0] = pt.x; 
-      xyz[1] = pt.y; 
-      xyz[2] = pt.z; 
-      global_mapper_ptr_->occupancy_grid_.WorldToGrid(xyz, ixyz);
-      float occupancy_value = global_mapper_ptr_->occupancy_grid_.ReadValue(ixyz);
-      bool is_occupied = global_mapper_ptr_->occupancy_grid_.IsOccupied(occupancy_value); 
-      bool is_dynamic = global_mapper_ptr_->temporal_grid_.IsDynamic(ixyz, is_occupied);
-      if (is_occupied)
+
+    #pragma omp parallel
+    { 
+      pcl::PointCloud<pcl::PointXYZ> local_cloud; 
+      #pragma omp for nowait 
+      for (size_t i = 0; i < cloud_->size(); ++i) 
       {
-        global_mapper_ptr_->occupancy_grid_.GridToWorld(ixyz, xyz);
-        if (is_dynamic)
+        const auto &pt = cloud_->points[i];
+        xyz[0] = pt.x; 
+        xyz[1] = pt.y; 
+        xyz[2] = pt.z; 
+        global_mapper_ptr_->occupancy_grid_.WorldToGrid(xyz, ixyz);
+        float occupancy_value = global_mapper_ptr_->occupancy_grid_.ReadValue(ixyz);
+        bool is_occupied = global_mapper_ptr_->occupancy_grid_.IsOccupied(occupancy_value); 
+        bool is_dynamic = global_mapper_ptr_->temporal_grid_.IsDynamic(ixyz, is_occupied);
+        if (is_occupied)
         {
-          if (xyz[2] > params_.z_ground) // only publish points above the ground
+          global_mapper_ptr_->occupancy_grid_.GridToWorld(ixyz, xyz);
+          if (is_dynamic)
           {
-            dynamic_cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
+            if (xyz[2] > params_.z_ground) // only publish points above the ground
+            {
+              local_cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
+            }
           }
         }
       }
 
+      #pragma omp critical
+      {
+        dynamic_cloud += local_cloud; 
+      }
     }
 
     int grid_dimensions[3];
@@ -571,31 +579,42 @@ namespace global_mapper_ros
     xyz[0] = 0.0;
     xyz[1] = 0.0; 
     xyz[2] = 0.0;
-    for (int x = 0; x < grid_dimensions[0]; x++)
-    {
-      for (int y = 0; y < grid_dimensions[1]; y++)
-      {
-        for (int z = 0; z < grid_dimensions[2]; z++)
-        {
-          ixyz[0] = x;
-          ixyz[1] = y;
-          ixyz[2] = z; 
 
-          float occupancy_value = global_mapper_ptr_->occupancy_grid_.ReadValue(ixyz);
-          bool is_occupied = global_mapper_ptr_->occupancy_grid_.IsOccupied(occupancy_value); 
-          bool is_dynamic = global_mapper_ptr_->temporal_grid_.IsDynamic(ixyz, is_occupied);
-          if (is_occupied)
+    #pragma omp parallel
+    {
+      pcl::PointCloud<pcl::PointXYZ> local_cloud; 
+      #pragma omp for collapse(3) nowait 
+      for (int x = 0; x < grid_dimensions[0]; x++)
+      {
+        for (int y = 0; y < grid_dimensions[1]; y++)
+        {
+          for (int z = 0; z < grid_dimensions[2]; z++)
           {
-            global_mapper_ptr_->occupancy_grid_.GridToWorld(ixyz, xyz);
-            if (!is_dynamic)
+            ixyz[0] = x;
+            ixyz[1] = y;
+            ixyz[2] = z; 
+
+            float occupancy_value = global_mapper_ptr_->occupancy_grid_.ReadValue(ixyz);
+            bool is_occupied = global_mapper_ptr_->occupancy_grid_.IsOccupied(occupancy_value); 
+            bool is_dynamic = global_mapper_ptr_->temporal_grid_.IsDynamic(ixyz, is_occupied);
+            if (is_occupied)
             {
-              if (xyz[2] > params_.z_ground) // only publish points above the ground
+              global_mapper_ptr_->occupancy_grid_.GridToWorld(ixyz, xyz);
+              if (!is_dynamic)
               {
-                static_cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
+                if (xyz[2] > params_.z_ground) // only publish points above the ground
+                {
+                  local_cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
+                }
               }
             }
           }
         }
+      }
+
+      #pragma omp critical 
+      {
+        static_cloud += local_cloud;
       }
     }
 
@@ -609,66 +628,7 @@ namespace global_mapper_ros
     pcl::toROSMsg(static_cloud, *static_pointcloud);
     static_pointcloud->header.frame_id = "map";
     static_pointcloud->header.stamp = rclcpp::Clock().now();
-
-    // /////////////// END NEW /////////////////////////////////////////
-
-
-    // std::unique_lock<std::mutex> lock(global_mapper_ptr_->output_mutex_);
-
-    // int grid_dimensions[3];
-    // global_mapper_ptr_->occupancy_grid_.GetGridDimensions(grid_dimensions);
-
-    // double xyz[3] = {0.0};
-    // pcl::PointCloud<pcl::PointXYZ> dynamic_cloud;
-    // pcl::PointCloud<pcl::PointXYZ> static_cloud;
-    // for (int x = 0; x < grid_dimensions[0]; x++)
-    // {
-    //   for (int y = 0; y < grid_dimensions[1]; y++)
-    //   {
-    //     for (int z = 0; z < grid_dimensions[2]; z++)
-    //     {
-    //       int ixyz[3] = {x, y, z};
-    //       float occupancy_value = global_mapper_ptr_->occupancy_grid_.ReadValue(ixyz);
-    //       bool is_occupied = global_mapper_ptr_->occupancy_grid_.IsOccupied(occupancy_value); 
-    //       bool is_dynamic = global_mapper_ptr_->temporal_grid_.IsDynamic(ixyz, is_occupied);
-    //       if (is_occupied)
-    //       {
-    //         global_mapper_ptr_->occupancy_grid_.GridToWorld(ixyz, xyz);
-    //         if (is_dynamic)
-    //         {
-    //           if (xyz[2] > params_.z_ground) // only publish points above the ground
-    //           {
-    //             // std::cout << "Dynamic voxel (" << xyz[0] << ", " << xyz[1] << ", " << xyz[2] << " with timestamp: " << this->now().seconds() - start_time_ << std::endl;
-    //             dynamic_cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
-    //           }
-    //         }
-    //         else
-    //         {
-    //           if (xyz[2] > params_.z_ground) // only publish points above the ground
-    //           {
-    //             static_cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
-    //           }
-    //         }
-    //       }
-    //     }
-    //   }
-    // }
-
-    // lock.unlock();
-
-    // RCLCPP_INFO(this->get_logger(), "  [Occupancy] found %zu occupied cells", dynamic_cloud.size());
-    // pcl::toROSMsg(dynamic_cloud, *dynamic_pointcloud);
-    // dynamic_pointcloud->header.frame_id = "map";
-    // dynamic_pointcloud->header.stamp = rclcpp::Clock().now();
-
-    // pcl::toROSMsg(static_cloud, *static_pointcloud);
-    // static_pointcloud->header.frame_id = "map";
-    // static_pointcloud->header.stamp = rclcpp::Clock().now();
-
-    // I (Jesus) changed the stamp so that it is the same as the last point cloud used in this map
-    // pointcloud->header.stamp = tstampLastPclFused_;
-
-  }                          
+}                                    
 
   // might be good to add more debug warnings, e.g dense and sparse paths are emtpy
   void GlobalMapperRos::Publish()
