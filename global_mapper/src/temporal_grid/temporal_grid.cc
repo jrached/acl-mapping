@@ -8,7 +8,7 @@ namespace temporal_grid
 TemporalGrid::TemporalGrid(const double origin[3], const double world_dimensions[3], const float resolution, float occupied_threshold, float unoccupied_threshold) 
 : voxel_grid::VoxelGrid<std::vector<double>>(origin, world_dimensions, resolution), occupied_threshold_(occupied_threshold), unoccupied_threshold_(unoccupied_threshold), resolution_(resolution)
 {
-    offsets_ = this->generateOffsets();
+    offsets_ = this->generateOffsets(2);
 }
 
 void TemporalGrid::UpdateTemporalInfo(const int ind, const bool is_occupied, const bool is_unknown, const double timestamp)
@@ -118,7 +118,7 @@ bool TemporalGrid::IsDynamic(const int ind, bool is_occupied)
     {
         int ixyz[3];
         this->IndexToGrid(ind, ixyz); // TODO: Convert to grid indices instead 
-        return !this->AreNeighborsStatic(ixyz, 1); // Filter out noise 
+        return !this->AreNeighborsStatic(ixyz, 5); // Filter out noise 
         return true;
     }
     return false; 
