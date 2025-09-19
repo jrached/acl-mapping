@@ -14,9 +14,9 @@ namespace global_mapper_ros
     tf_listener_ptr_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_ptr_);
     name_drone = this->get_namespace();
     name_drone.erase(std::remove(name_drone.begin(), name_drone.end(), '/'), name_drone.end()); // remove slashes
-    // lidar_frame_ = name_drone + "/" + name_drone + "_livox";
-    lidar_frame_ = name_drone + "/init_pose";
-    drone_frame_id_ = name_drone + "/base_link";
+    lidar_frame_ = name_drone + "/" + name_drone + "_livox";
+    // lidar_frame_ = name_drone + "/init_pose";
+    // drone_frame_id_ = name_drone + "/base_link";
 
     // Instantiate cloud pointer to empty cloud message 
     const sensor_msgs::msg::PointCloud2::SharedPtr cloud_msg_ = std::make_shared<sensor_msgs::msg::PointCloud2>();
@@ -538,6 +538,9 @@ namespace global_mapper_ros
     pcl::PointCloud<pcl::PointXYZ> dynamic_cloud;
     pcl::PointCloud<pcl::PointXYZ> static_cloud;
 
+    int grid_dimensions[3];
+    global_mapper_ptr_->occupancy_grid_.GetGridDimensions(grid_dimensions);
+
     // Populate clouds according to temporal segmentation scheme
     double xyz[3] = {0.0};
     int ixyz[3] = {0};
@@ -558,15 +561,15 @@ namespace global_mapper_ros
         {
           if (xyz[2] > params_.z_ground) // only publish points above the ground
           {
-            dynamic_cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
+            if ((ixyz[0] >= 0 && ixyz[0] < grid_dimensions[0]) && (ixyz[1] >= 0 && ixyz[1] < grid_dimensions[1]) && (ixyz[2] >= 0 && ixyz[2] < grid_dimensions[2])) // If points are within map
+            {
+              dynamic_cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
+            }
           }
         }
       }
 
     }
-
-    int grid_dimensions[3];
-    global_mapper_ptr_->occupancy_grid_.GetGridDimensions(grid_dimensions);
 
     xyz[0] = 0.0;
     xyz[1] = 0.0; 
@@ -766,46 +769,46 @@ namespace global_mapper_ros
   void GlobalMapperRos::PoseCallback(const dynus_interfaces::msg::State::SharedPtr pose_ptr)
   {
 
-    const std::string target_frame = params_.global_frame;
-    geometry_msgs::msg::TransformStamped tf_stamped;
-    try
-    {
-      tf_stamped = tf_buffer_ptr_->lookupTransform(
-          target_frame,
-          // drone_frame_id_,
-          lidar_frame_,
-          rclcpp::Time(0),
-          rclcpp::Duration(std::chrono::milliseconds(20)));
+    // const std::string target_frame = params_.global_frame;
+    // geometry_msgs::msg::TransformStamped tf_stamped;
+    // try
+    // {
+    //   tf_stamped = tf_buffer_ptr_->lookupTransform(
+    //       target_frame,
+    //       // drone_frame_id_,
+    //       lidar_frame_,
+    //       rclcpp::Time(0),
+    //       rclcpp::Duration(std::chrono::milliseconds(20)));
 
-      // Eigen::Vector3d pos = tf_stamped.transform.translation; 
-      // auto quat = tf_stamped.transform.rotation;
+    //   // Eigen::Vector3d pos = tf_stamped.transform.translation; 
+    //   // auto quat = tf_stamped.transform.rotation;
 
-      // std::cout << "transform position: (" << tf_stamped.transform.translation.x << ", " << tf_stamped.transform.translation.y << ", " << tf_stamped.transform.translation.z << ")" << std::endl;
-      // std::cout << "transform orientation: (" << tf_stamped.transform.rotation.x << ", " << tf_stamped.transform.rotation.y << ", " << tf_stamped.transform.rotation.z << ", " << tf_stamped.transform.rotation.w << ")" << std::endl; 
-    }
-    catch (const tf2::TransformException &ex)
-    {
-      RCLCPP_WARN(this->get_logger(),
-                  "[PointCloudCallback] lookupTransform failed: %s", ex.what());
-      return;
-    }
+    //   // std::cout << "transform position: (" << tf_stamped.transform.translation.x << ", " << tf_stamped.transform.translation.y << ", " << tf_stamped.transform.translation.z << ")" << std::endl;
+    //   // std::cout << "transform orientation: (" << tf_stamped.transform.rotation.x << ", " << tf_stamped.transform.rotation.y << ", " << tf_stamped.transform.rotation.z << ", " << tf_stamped.transform.rotation.w << ")" << std::endl; 
+    // }
+    // catch (const tf2::TransformException &ex)
+    // {
+    //   RCLCPP_WARN(this->get_logger(),
+    //               "[PointCloudCallback] lookupTransform failed: %s", ex.what());
+    //   return;
+    // }
 
-    // 4) Build Eigen matrix, guard NaN/Inf, cast to float
-    Eigen::Matrix4d mat_d = tf2::transformToEigen(tf_stamped).matrix();
-    if (!mat_d.allFinite())
-    {
-      RCLCPP_WARN(this->get_logger(),
-                  "Transform matrix contains NaN/Inf, skipping cloud");
-      return;
-    }
-    Eigen::Matrix4f mat_f = mat_d.cast<float>();
+    // // 4) Build Eigen matrix, guard NaN/Inf, cast to float
+    // Eigen::Matrix4d mat_d = tf2::transformToEigen(tf_stamped).matrix();
+    // if (!mat_d.allFinite())
+    // {
+    //   RCLCPP_WARN(this->get_logger(),
+    //               "Transform matrix contains NaN/Inf, skipping cloud");
+    //   return;
+    // }
+    // Eigen::Matrix4f mat_f = mat_d.cast<float>();
 
-    // Transform pose to global frame 
-    Eigen::Vector4f xyz_homo(pose_ptr->pos.x, pose_ptr->pos.y, pose_ptr->pos.z, 1.0f);
-    Eigen::Vector4f xyz_global = mat_f * xyz_homo;
+    // // Transform pose to global frame 
+    // Eigen::Vector4f xyz_homo(pose_ptr->pos.x, pose_ptr->pos.y, pose_ptr->pos.z, 1.0f);
+    // Eigen::Vector4f xyz_global = mat_f * xyz_homo;
 
-    // double xyz[3] = {pose_ptr->pos.x, pose_ptr->pos.y, pose_ptr->pos.z};
-    double xyz[3] = {xyz_global[0], xyz_global[1], xyz_global[2]};
+    double xyz[3] = {pose_ptr->pos.x, pose_ptr->pos.y, pose_ptr->pos.z};
+    // double xyz[3] = {xyz_global[0], xyz_global[1], xyz_global[2]};
     if (!std::isfinite(xyz[0]) || !std::isfinite(xyz[1]) || !std::isfinite(xyz[2]))
     {
       RCLCPP_WARN(this->get_logger(), "Received invalid pose position. Skipping update.");
