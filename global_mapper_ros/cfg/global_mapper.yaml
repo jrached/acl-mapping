@@ -4,7 +4,7 @@ global_mapper_ros:
         global_frame: world
         origin: [0.0, 0.0, 3.0]        # now grid covers x,y ∈ [–10, +10]
         world_dimensions: [10.0, 10.0, 2.0]
-        resolution: 0.2
+        resolution: 0.3 #0.2
         radius_drone: 1.0 # [m] This should be higher than the resolutions
         Ra: 4.0 # [m] radius of the first sphere (Sa) in the planner. The unknown pcloud published will only contain points inside this sphere
         z_ground: 0.1 #[m] points below z_ground are not published in the known grid

@@ -700,7 +700,7 @@ namespace global_mapper_ros
     }
 
     double duration = 1000 * (this->now().seconds() - prev_time);
-    // std::cout << "Mapping + segmentation duration: " << duration << " ms" << std::endl; 
+    std::cout << "Mapping + segmentation duration: " << duration << " ms" << std::endl; 
   }
 
   // Callback for Odometry (jackal)

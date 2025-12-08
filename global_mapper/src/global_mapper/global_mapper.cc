@@ -154,13 +154,13 @@ namespace global_mapper
 
       if (dist_sq <= max_r_sq && std::isfinite(pt.intensity))
       {
-        // It’s a valid return within range ⇒ mark occupied
+        // It’s a valid return within range -> mark occupied
         end[0] = pt.x;
         end[1] = pt.y;
         end[2] = pt.z;
         occupancy_grid_.UpdateValue(end, params_.hit_inc);
       }
-      // Else: beam simply clipped at max range ⇒ do not insert a false obstacle
+      // Else: beam simply clipped at max range -> do not insert a false obstacle
     }
   }
 
