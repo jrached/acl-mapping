@@ -8,8 +8,8 @@ namespace temporal_grid
 TemporalGrid::TemporalGrid(const double origin[3], const double world_dimensions[3], const float resolution, float occupied_threshold, float unoccupied_threshold) 
 : voxel_grid::VoxelGrid<std::vector<double>>(origin, world_dimensions, resolution), occupied_threshold_(occupied_threshold), unoccupied_threshold_(unoccupied_threshold), resolution_(resolution)
 {
-    offsets_ = this->generateOffsets(2); // No false positives 
-    // offsets_ = this->generateOffsets(1);
+    // offsets_ = this->generateOffsets(2); // No false positives 
+    offsets_ = this->generateOffsets(1);
 }
 
 void TemporalGrid::UpdateTemporalInfo(const int ind, const bool is_occupied, const bool is_unknown, const double timestamp)
