@@ -520,28 +520,32 @@ namespace global_mapper_ros
     }
 
     // Remove NaN values from the cloud
-    std::vector<int> indices;
-    pcl::removeNaNFromPointCloud(*cloud_, *cloud_, indices);
+    // std::vector<int> indices;
+    // pcl::removeNaNFromPointCloud(*cloud_, *cloud_, indices);
 
     // Voxel grid filtering to downsample the cloud
-    pcl::VoxelGrid<pcl::PointXYZ> vg;
-    vg.setInputCloud(cloud_);
-    // vg.setLeafSize(dynus_map_res_, dynus_map_res_, dynus_map_res_);
-    vg.setLeafSize(0.2, 0.2, 0.2);
-    vg.filter(*cloud_);
+    // pcl::VoxelGrid<pcl::PointXYZ> vg;
+    // vg.setInputCloud(cloud_);
+    // // vg.setLeafSize(dynus_map_res_, dynus_map_res_, dynus_map_res_);
+    // vg.setLeafSize(0.2, 0.2, 0.2);
+    // vg.filter(*cloud_);
 
-    std::unique_lock<std::mutex> lock(global_mapper_ptr_->output_mutex_);
+    // std::unique_lock<std::mutex> lock(global_mapper_ptr_->output_mutex_);
 
     // Declare clouds to be populated 
     pcl::PointCloud<pcl::PointXYZ> dynamic_cloud;
     pcl::PointCloud<pcl::PointXYZ> static_cloud;
 
     // Populate clouds according to temporal segmentation scheme
-    double xyz[3] = {0.0};
-    int ixyz[3] = {0};
+    // double xyz[3] = {0.0};
+    // int ixyz[3] = {0};
 
     #pragma omp parallel
     { 
+
+      double xyz[3] = {0.0};
+      int ixyz[3] = {0};
+
       pcl::PointCloud<pcl::PointXYZ> local_cloud; 
       #pragma omp for nowait 
       for (size_t i = 0; i < cloud_->size(); ++i) 
@@ -576,12 +580,15 @@ namespace global_mapper_ros
     int grid_dimensions[3];
     global_mapper_ptr_->occupancy_grid_.GetGridDimensions(grid_dimensions);
 
-    xyz[0] = 0.0;
-    xyz[1] = 0.0; 
-    xyz[2] = 0.0;
+    // xyz[0] = 0.0;
+    // xyz[1] = 0.0; 
+    // xyz[2] = 0.0;
 
     #pragma omp parallel
     {
+      double xyz[3] = {0.0};
+      int ixyz[3] = {0};
+
       pcl::PointCloud<pcl::PointXYZ> local_cloud; 
       #pragma omp for collapse(3) nowait 
       for (int x = 0; x < grid_dimensions[0]; x++)
@@ -618,7 +625,7 @@ namespace global_mapper_ros
       }
     }
 
-    lock.unlock();
+    // lock.unlock();
 
     // Publish clouds 
     pcl::toROSMsg(dynamic_cloud, *dynamic_pointcloud);

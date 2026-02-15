@@ -5,7 +5,7 @@
 
 // TODO: Make occupancy thresholds parameters
 float OCCUPIED_THRESH = 3.0; 
-float UNOCCUPIED_THRESH = 1.0;
+float UNOCCUPIED_THRESH = 0.5;
 
 
 namespace global_mapper
