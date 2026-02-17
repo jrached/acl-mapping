@@ -53,6 +53,20 @@ colcon build \
   --merge-install
 ```
 
+### And for vectorized build 
+```bash
+colcon build \
+  --cmake-args \
+    -DCMAKE_C_COMPILER=/usr/bin/gcc \
+    -DCMAKE_CXX_COMPILER=/usr/bin/g++ \
+    -DCMAKE_INSTALL_PREFIX=$PWD/install \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_CXX_FLAGS_RELEASE="-O3 -march=native" \
+  --merge-install
+
+```
+### Note: You'll want to use --packages-skip for all other packages as some are not stable under a Realease build
+
 ## Commands:
 `roslaunch global_mapper_ros global_mapper_node.launch`
 

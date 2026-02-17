@@ -569,7 +569,8 @@ namespace global_mapper_ros
           {
             if (xyz[2] > params_.z_ground) // only publish points above the ground
             {
-              local_cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
+              local_cloud.push_back(pcl::PointXYZ(pt.x, pt.y, pt.z)); // replace with emplace_back (slightly more optimized according to chat)
+              // local_cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
             }
           }
         }
