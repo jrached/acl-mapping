@@ -41,7 +41,7 @@ def generate_launch_description():
         DeclareLaunchArgument('load_params',          default_value='true',                        description='whether to load the YAML params'),
         DeclareLaunchArgument('depth_pointcloud_topic', default_value='mid360_PointCloud2',  description='input pointcloud topic'),
         # DeclareLaunchArgument('depth_pointcloud_topic', default_value='d435/depth/color/points',  description='input pointcloud topic'),
-        DeclareLaunchArgument('pose_topic',           default_value='state',                        description='input pose topic'),
+        DeclareLaunchArgument('pose_topic',           default_value='mavros/local_position/pose',   description='input pose topic'),
         DeclareLaunchArgument('goal_topic',           default_value='/move_base_simple/goal',       description='input goal topic'),
         DeclareLaunchArgument('odom_topic',           default_value='odometry/filtered_no',         description='input odometry topic'),
         # **no more "~" here**:
@@ -79,5 +79,5 @@ def generate_launch_description():
                 ('sparse_path_topic',    sparse_path_topic),
             ],
             # prefix='xterm -e gdb -q -ex run --args', # gdb debugging
-        ),
+            ),
     ])

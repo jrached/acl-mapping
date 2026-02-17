@@ -137,7 +137,11 @@ namespace global_mapper_ros
 
   void GlobalMapperRos::InitSubscribers()
   {
-    pose_sub_ = this->create_subscription<dynus_interfaces::msg::State>("pose_topic", 1, std::bind(&GlobalMapperRos::PoseCallback, this, std::placeholders::_1));
+    rclcpp::QoS odom_qos(rclcpp::KeepLast(1));
+    odom_qos.best_effort().durability_volatile();
+
+    // pose_sub_ = this->create_subscription<dynus_interfaces::msg::State>("pose_topic", 1, std::bind(&GlobalMapperRos::PoseCallback, this, std::placeholders::_1));
+    pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>("pose_topic", odom_qos, std::bind(&GlobalMapperRos::PoseCallback, this, std::placeholders::_1));
     // odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>("odom_topic", 1, std::bind(&GlobalMapperRos::OdomCallback, this, std::placeholders::_1));
     goal_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>("goal_topic", 1, std::bind(&GlobalMapperRos::GoalCallback, this, std::placeholders::_1));
     pointcloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>("depth_pointcloud_topic", rclcpp::SensorDataQoS(), std::bind(&GlobalMapperRos::PointCloudCallback, this, std::placeholders::_1));
@@ -730,7 +734,7 @@ namespace global_mapper_ros
     global_mapper_ptr_->UpdateOrigin(xyz);
   }
 
-  void GlobalMapperRos::PoseCallback(const dynus_interfaces::msg::State::SharedPtr pose_ptr)
+  void GlobalMapperRos::PoseCallback(const geometry_msgs::msg::PoseStamped::SharedPtr pose_ptr)
   {
 
     const std::string target_frame = params_.global_frame;
@@ -768,10 +772,10 @@ namespace global_mapper_ros
     Eigen::Matrix4f mat_f = mat_d.cast<float>();
 
     // Transform pose to global frame 
-    Eigen::Vector4f xyz_homo(pose_ptr->pos.x, pose_ptr->pos.y, pose_ptr->pos.z, 1.0f);
+    Eigen::Vector4f xyz_homo(pose_ptr->pose.position.x, pose_ptr->pose.position.y, pose_ptr->pose.position.z, 1.0f);
     Eigen::Vector4f xyz_global = mat_f * xyz_homo;
 
-    // double xyz[3] = {pose_ptr->pos.x, pose_ptr->pos.y, pose_ptr->pos.z};
+    // double xyz[3] = {pose_ptr->pose.position.x, pose_ptr->pose.position.y, pose_ptr->pose.position.z};
     double xyz[3] = {xyz_global[0], xyz_global[1], xyz_global[2]};
     if (!std::isfinite(xyz[0]) || !std::isfinite(xyz[1]) || !std::isfinite(xyz[2]))
     {
