@@ -60,6 +60,7 @@ public:
   GlobalMapperRos();
   void Run();
   double start_time_; 
+  std_msgs::msg::Header_<std::allocator<void> >::_stamp_type pc_stamp_;
 
 private:
   void GetParams();

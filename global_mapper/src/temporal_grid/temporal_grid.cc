@@ -119,8 +119,8 @@ bool TemporalGrid::IsDynamic(const int ind, bool is_occupied)
     {
         int ixyz[3];
         this->IndexToGrid(ind, ixyz); // TODO: Convert to grid indices instead 
-        return !this->AreNeighborsStatic(ixyz, 1); // Filter out noise // No false positives 
-        // return !this->AreNeighborsStatic(ixyz, 5); // Filter out noise  
+        // return !this->AreNeighborsStatic(ixyz, 1); // Filter out noise // No false positives 
+        return !this->AreNeighborsStatic(ixyz, 1); // Filter out noise  
         return true;
     }
     return false; 

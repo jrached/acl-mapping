@@ -62,6 +62,7 @@ colcon build \
     -DCMAKE_INSTALL_PREFIX=$PWD/install \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_CXX_FLAGS_RELEASE="-O3 -march=native" \
+    -DEIGEN_DONT_VECTORIZE=OFF \
   --merge-install
 
 ```
