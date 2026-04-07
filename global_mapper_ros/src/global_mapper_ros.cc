@@ -530,30 +530,12 @@ namespace global_mapper_ros
       return;
     }
 
-    // Remove NaN values from the cloud
-    // std::vector<int> indices;
-    // pcl::removeNaNFromPointCloud(*cloud_, *cloud_, indices);
-
-    // Voxel grid filtering to downsample the cloud
-    // pcl::VoxelGrid<pcl::PointXYZ> vg;
-    // vg.setInputCloud(cloud_);
-    // // vg.setLeafSize(dynus_map_res_, dynus_map_res_, dynus_map_res_);
-    // vg.setLeafSize(0.2, 0.2, 0.2);
-    // vg.filter(*cloud_);
-
-    // std::unique_lock<std::mutex> lock(global_mapper_ptr_->output_mutex_);
-
     // Declare clouds to be populated 
     pcl::PointCloud<pcl::PointXYZ> dynamic_cloud;
     pcl::PointCloud<pcl::PointXYZ> static_cloud;
 
-    // Populate clouds according to temporal segmentation scheme
-    // double xyz[3] = {0.0};
-    // int ixyz[3] = {0};
-
     #pragma omp parallel
     { 
-
       double xyz[3] = {0.0};
       int ixyz[3] = {0};
 
@@ -577,7 +559,6 @@ namespace global_mapper_ros
             if (xyz[2] > params_.z_ground) // only publish points above the ground
             {
               local_cloud.push_back(pcl::PointXYZ(pt.x, pt.y, pt.z)); // replace with emplace_back (slightly more optimized according to chat)
-              // local_cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
             }
           }
         }
