@@ -13,9 +13,6 @@
 #include <pcl/common/transforms.h>
 #include <Eigen/Dense>
 #include <visualization_msgs/msg/marker_array.hpp>
-// #include <dynus_interfaces/msg/dyn_traj.hpp>
-// #include <dynus/dynus_type.hpp>
-// #include <dynus/utils.hpp>
 #include <tf2_eigen/tf2_eigen.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/passthrough.h>
@@ -43,13 +40,17 @@ struct EKFState {
     int id;
     bool assigned;
     std_msgs::msg::ColorRGBA color;
+    float diag_R; 
+    float diag_Q;
 
     EKFState() {} // Constructor for Cluster struct
-    EKFState(int state_size, Eigen::MatrixXd Q, Eigen::MatrixXd R, double time_updated, double last_mes_time, Eigen::Vector3d bbox, int id, float alpha) {
+    EKFState(int state_size, Eigen::MatrixXd Q, Eigen::MatrixXd R, double time_updated, double last_mes_time, Eigen::Vector3d bbox, int id, float alpha, float diag_R, float diag_Q) {
         x = Eigen::VectorXd::Zero(state_size);
         P = Eigen::MatrixXd::Identity(state_size, state_size);
         this->Q = Q;
         this->R = R;
+        this->diag_R = diag_R;
+        this->diag_Q = diag_Q;
         this->time_updated = time_updated;
         this->last_mes_time = last_mes_time;
         this->bbox = bbox;
@@ -64,19 +65,14 @@ struct EKFState {
         this->color.r = static_cast<float>(rand()) / RAND_MAX;  // Random red
         this->color.g = static_cast<float>(rand()) / RAND_MAX;  // Random green
         this->color.b = static_cast<float>(rand()) / RAND_MAX;  // Random blue
-        // If you want to set a specific color
-        // this->color.r = 0.0 / 255.0;
-        // this->color.g = 0.0 / 255.0;
-        // this->color.b = 255.0 / 255.0;
         this->color.a = 0.4;  // Opacity
     }
 
-    void updateAvgBbox()
+    void updateBbox(const Eigen::Vector3d& bbox)
     {
-        this->avg_bbox = this->alpha * this->bbox + (1 - this->alpha) * this->avg_bbox; 
-        
-        // Temp. TODO: Make min bbox parameter? 
         Eigen::Vector3d min_bbox(0.5, 0.5, 0.5);
+        this->bbox = this->alpha * bbox + (1 - this->alpha) * this->bbox; 
+        this->avg_bbox = this->alpha * this->bbox + (1 - this->alpha) * this->avg_bbox; 
         this->avg_bbox = this->avg_bbox.array().max(min_bbox.array());
     }
 };
@@ -136,6 +132,9 @@ private:
     float alpha_;
     double gridnet_tolerance_;
     double time_to_hide_obstacle_;
+    bool diag_R_;
+    bool diag_Q_;
+    float association_tolerance_;
 
     // Timer 
     rclcpp::TimerBase::SharedPtr timer_;
@@ -150,10 +149,6 @@ private:
     rclcpp::Publisher<geometry_msgs::msg::TwistStamped>::SharedPtr pred_vel_pub_;
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr debug_pub_;
     rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr sub_est_obs_; 
-
-    // TEMP FOR EVAL TODO DELETE
-    rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr sub_odom_;
-
 
     // EKF states for multiple objects
     std::vector<EKFState> ekf_states_;  // Vector of EKF states for multiple objects
@@ -185,9 +180,6 @@ private:
     double calculateVariance(const std::vector<double>& t, const std::vector<double>& y, const Eigen::VectorXd& beta, int degree);
     void filterStaticObstacles();
     void trackObstacles();
-
-    // Temp for rerunning bag with correct timestamps TODO: remove
-    void odomCallback(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
 
     // GridNet functions 
     void resetEKFassignments();

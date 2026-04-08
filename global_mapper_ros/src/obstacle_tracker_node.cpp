@@ -1,12 +1,14 @@
 #include <obstacle_tracker/obstacle_tracker_node.h>
 #include <limits>
 
+int STATE_SIZE = 9;
+int MEASUREMENT_SIZE = 3;   
+
 // Adaptive EKF Prediction Step for 3D
 void ekf_predict(EKFState &ekf_state, double dt)
 {
-    int state_size = 9;
     double x = ekf_state.x[0], y = ekf_state.x[1], z = ekf_state.x[2], theta = ekf_state.x[3], phi = ekf_state.x[4], v = ekf_state.x[5], a = ekf_state.x[6], theta_dot = ekf_state.x[7], phi_dot = ekf_state.x[8];
-    Eigen::MatrixXd F = Eigen::MatrixXd::Identity(state_size, state_size);
+    Eigen::MatrixXd F = Eigen::MatrixXd::Identity(STATE_SIZE, STATE_SIZE);
     F(0, 3) = -v * cos(phi) * sin(theta) * dt - 0.5 * a * cos(phi) * sin(theta) * std::pow(dt, 2);
     F(0, 4) = - v * sin(phi) * cos(theta) * dt - 0.5 * a * sin(phi) * cos(theta) * std::pow(dt, 2);
     F(0, 5) = cos(phi) * cos(theta) * dt;
@@ -40,9 +42,8 @@ void ekf_predict(EKFState &ekf_state, double dt)
 // Adaptive EKF Update Step for 3D
 void aekf_update(EKFState &ekf_state, const Eigen::VectorXd &z, double alpha, double time_updated, double last_mes_time, const Eigen::Vector3d &bbox, bool use_adaptive_kf)
 {
-    int state_size = 9;
     Eigen::MatrixXd H; // Measurement matrix (we only measure position [x, y, z])
-    H = Eigen::MatrixXd::Zero(3, state_size);
+    H = Eigen::MatrixXd::Zero(MEASUREMENT_SIZE, STATE_SIZE);
     H(0, 0) = 1;
     H(1, 1) = 1;
     H(2, 2) = 1;
@@ -65,12 +66,12 @@ void aekf_update(EKFState &ekf_state, const Eigen::VectorXd &z, double alpha, do
     }
     else
     {
-        ekf_state.R = Eigen::MatrixXd::Identity(3, 3) * 0.01; // For hardware 0.01
-        ekf_state.Q = Eigen::MatrixXd::Identity(state_size, state_size) * 0.01; //0.01 For hardware TODO: Make parameter
+        ekf_state.R = Eigen::MatrixXd::Identity(MEASUREMENT_SIZE, MEASUREMENT_SIZE) * ekf_state.diag_R; 
+        ekf_state.Q = Eigen::MatrixXd::Identity(STATE_SIZE, STATE_SIZE) * ekf_state.diag_Q;  
     }
 
     // Update covariance
-    ekf_state.P = (Eigen::MatrixXd::Identity(state_size, state_size) - K * H) * ekf_state.P; // Update covariance
+    ekf_state.P = (Eigen::MatrixXd::Identity(STATE_SIZE, STATE_SIZE) - K * H) * ekf_state.P; // Update covariance
 
     // Update time
     ekf_state.time_updated = time_updated;
@@ -79,7 +80,7 @@ void aekf_update(EKFState &ekf_state, const Eigen::VectorXd &z, double alpha, do
     ekf_state.last_mes_time = last_mes_time;
 
     // Update bounding box
-    ekf_state.bbox = 0.5 * ekf_state.bbox + (1 - 0.5) * bbox;
+    ekf_state.updateBbox(bbox);
 
     // Mark as assigned 
     ekf_state.assigned = true; 
@@ -87,9 +88,9 @@ void aekf_update(EKFState &ekf_state, const Eigen::VectorXd &z, double alpha, do
 }
 
 // Associate cluster with the nearest EKF state using Euclidean distance
-int associate_cluster_with_ekf(const Eigen::Vector3d &cluster_centroid, const std::vector<EKFState> &ekf_states, double cluster_tolerance)
+int associate_cluster_with_ekf(const Eigen::Vector3d &cluster_centroid, const std::vector<EKFState> &ekf_states, double association_tolerance)
 {
-    double min_distance = cluster_tolerance; // Minimum distance to associate
+    double min_distance = association_tolerance; // Minimum distance to associate
     int closest_ekf_idx = -1;
 
     for (int i = 0; i < ekf_states.size(); ++i)
@@ -208,6 +209,9 @@ void ObstacleTrackerNode::declareAndsetParameters()
     this->declare_parameter("alpha", 0.5); 
     this->declare_parameter("gridnet_tolerance", 0.6);
     this->declare_parameter("time_to_hide_obstacle", 0.3);
+    this->declare_parameter("diag_R", 0.01); 
+    this->declare_parameter("diag_Q", 0.01); 
+    this->declare_parameter("association_tolerance", 1.0); 
 
     // Set parameters
     visual_level_ = this->get_parameter("visual_level").as_int();
@@ -232,6 +236,10 @@ void ObstacleTrackerNode::declareAndsetParameters()
     alpha_ = this->get_parameter("alpha").as_double();
     gridnet_tolerance_ = this->get_parameter("gridnet_tolerance").as_double();
     time_to_hide_obstacle_ = this->get_parameter("time_to_hide_obstacle").as_double(); 
+    diag_R_ = this->get_parameter("diag_R").as_double(); 
+    diag_Q_ = this->get_parameter("diag_Q").as_double(); 
+    association_tolerance_ = this->get_parameter("association_tolerance").as_double();
+
 
     // Print the parameters
     RCLCPP_INFO(this->get_logger(), "visual_level: %d", visual_level_);
@@ -265,8 +273,6 @@ void ObstacleTrackerNode::pointcloudCallback(const sensor_msgs::msg::PointCloud2
     pc_timestamp_ = msg->header.stamp;
 
     start_time_ = this->now().seconds();
-
-    int state_size = 9;
 
     std::vector<Cluster> clusters;
 
@@ -324,7 +330,7 @@ void ObstacleTrackerNode::pointcloudCallback(const sensor_msgs::msg::PointCloud2
 
     std::vector<pcl::PointIndices> cluster_indices;
     pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-    ec.setClusterTolerance(0.3 * cluster_tolerance_); // Cluster tolerance (distance)
+    ec.setClusterTolerance(cluster_tolerance_); // Cluster tolerance (distance)
     ec.setMinClusterSize(min_cluster_size_);    // Minimum number of points per cluster
     ec.setMaxClusterSize(max_cluster_size_);    // Maximum number of points per cluster
     ec.setSearchMethod(tree);
@@ -358,7 +364,7 @@ void ObstacleTrackerNode::pointcloudCallback(const sensor_msgs::msg::PointCloud2
         }
 
         // Find the closest EKF state (data association)
-        int closest_ekf_idx = associate_cluster_with_ekf(centroid, ekf_states_, cluster_tolerance_);
+        int closest_ekf_idx = associate_cluster_with_ekf(centroid, ekf_states_, association_tolerance_);
 
         // Initialize a new cluster
         Cluster cluster;
@@ -366,17 +372,16 @@ void ObstacleTrackerNode::pointcloudCallback(const sensor_msgs::msg::PointCloud2
         if (closest_ekf_idx >= 0)
         {
             // Update the existing EKF state
-            ekf_predict(ekf_states_[closest_ekf_idx], this->now().seconds() - ekf_states_[closest_ekf_idx].time_updated);                                                             // EKF Prediction step
+            ekf_predict(ekf_states_[closest_ekf_idx], this->now().seconds() - ekf_states_[closest_ekf_idx].time_updated);                                  // EKF Prediction step
             aekf_update(ekf_states_[closest_ekf_idx], centroid, adaptive_kf_alpha_, this->now().seconds(), this->now().seconds(), bbox, use_adaptive_kf_); // EKF Update step
             cluster.setEKFStateAndCentroid(ekf_states_[closest_ekf_idx], centroid);
-            ekf_states_[closest_ekf_idx].updateAvgBbox(); //TODO delete
         }
         else
         {
             // No match found, add a new EKF state
             Eigen::MatrixXd Q_avg, R_avg;
             calculateAverageQandR(Q_avg, R_avg);
-            EKFState new_state(state_size, Q_avg, R_avg, this->now().seconds(), this->now().seconds(), bbox, ekf_state_id_++, alpha_);
+            EKFState new_state(STATE_SIZE, Q_avg, R_avg, this->now().seconds(), this->now().seconds(), bbox, ekf_state_id_++, alpha_, diag_R_, diag_Q_);
             new_state.x.head(3) = centroid; // Initialize state with the centroid
             ekf_states_.push_back(new_state);
             cluster.setEKFStateAndCentroid(new_state, centroid);
@@ -410,7 +415,6 @@ void ObstacleTrackerNode::pointcloudCallback(const sensor_msgs::msg::PointCloud2
                 ekf_predict(ekf_states_[closest_ekf_idx], this->now().seconds() - ekf_states_[closest_ekf_idx].time_updated); // EKF Prediction step
                 aekf_update(ekf_states_[closest_ekf_idx], gridnet_pos, adaptive_kf_alpha_, this->now().seconds(), ekf_states_[closest_ekf_idx].last_mes_time, ekf_states_[closest_ekf_idx].avg_bbox, use_adaptive_kf_); // EKF Update step
                 cluster.setEKFStateAndCentroid(ekf_states_[closest_ekf_idx], gridnet_pos);
-
 
                 // Add the cluster to the vector
                 clusters.push_back(cluster);
@@ -449,9 +453,8 @@ void ObstacleTrackerNode::deleteOldEKFstates()
 // Function to calculate the average of Q and R across all EKF states
 void ObstacleTrackerNode::calculateAverageQandR(Eigen::MatrixXd &Q_avg, Eigen::MatrixXd &R_avg)
 {
-    int state_size = 9;
-    Q_avg = Eigen::MatrixXd::Zero(state_size, state_size);
-    R_avg = Eigen::MatrixXd::Zero(3, 3);
+    Q_avg = Eigen::MatrixXd::Zero(STATE_SIZE, STATE_SIZE);
+    R_avg = Eigen::MatrixXd::Zero(MEASUREMENT_SIZE, MEASUREMENT_SIZE);
 
     if (!ekf_states_.empty())
     {
@@ -466,8 +469,8 @@ void ObstacleTrackerNode::calculateAverageQandR(Eigen::MatrixXd &Q_avg, Eigen::M
     else
     {
         // If there are no EKF states, initialize Q and R to default values
-        R_avg = Eigen::MatrixXd::Identity(3, 3) * 0.01; // For hardware 0.01
-        Q_avg = Eigen::MatrixXd::Identity(state_size, state_size) * 0.01; // For hardware 0.01
+        R_avg = Eigen::MatrixXd::Identity(MEASUREMENT_SIZE, MEASUREMENT_SIZE) * diag_R_; // For hardware 0.01
+        Q_avg = Eigen::MatrixXd::Identity(STATE_SIZE, STATE_SIZE) * diag_Q_; // For hardware 0.01
     }
 }
 
@@ -527,8 +530,7 @@ void ObstacleTrackerNode::publishBoxes(const std::vector<Cluster> &clusters)
         if (use_life_time_for_box_visualization_)
             marker.lifetime = rclcpp::Duration::from_seconds(box_visualization_duration_);
         marker.header.frame_id = frame_id_;
-        // marker.header.stamp = this->now(); // Ensure timestamp consistency
-        marker.header.stamp = pc_timestamp_; // Temp. TODO: revert. 
+        marker.header.stamp = pc_timestamp_; 
         marker.ns = "cluster_bounding_box";
         marker.id = marker_id_++; // Ensure unique IDs for new markers
         marker.type = visualization_msgs::msg::Marker::CUBE;
@@ -559,7 +561,7 @@ void ObstacleTrackerNode::publishBoxes(const std::vector<Cluster> &clusters)
         // Create a SPHERE marker to visualize the uncertainty
         visualization_msgs::msg::Marker unc_sphere_marker;
         unc_sphere_marker.header.frame_id = frame_id_;
-        unc_sphere_marker.header.stamp = this->now(); // Ensure timestamp consistency
+        unc_sphere_marker.header.stamp = pc_timestamp_; // Ensure timestamp consistency
         unc_sphere_marker.ns = "uncertainty_sphere";
         unc_sphere_marker.id = 0; // Not unique IDs so that only one sphere is visualized
         unc_sphere_marker.type = visualization_msgs::msg::Marker::SPHERE;
@@ -717,7 +719,7 @@ void ObstacleTrackerNode::publishPredictions(const std::vector<Cluster> &cluster
         double y_diff = abs(y_values.front() - y_values.back());
         double z_diff = abs(z_values.front() - z_values.back());
 
-        double cutoff_length_threshold = 0.1; // TODO: make this a parameter?
+        double cutoff_length_threshold = 0.1; 
 
         // If the predicted trajectory is too short, skip the polynomial fitting
         if (x_diff < cutoff_length_threshold && y_diff < cutoff_length_threshold && z_diff < cutoff_length_threshold)
@@ -755,7 +757,7 @@ void ObstacleTrackerNode::publishPredictions(const std::vector<Cluster> &cluster
 
         // // Publish DynTraj message with the predicted trajectory
         // dynus_interfaces::msg::DynTraj msg;
-        // msg.header.stamp = this->now();
+        // msg.header.stamp = pc_timestamp_;
         // msg.header.frame_id = frame_id_;
         // msg.id = clusters[i].ekf_state.id;
         // msg.bbox.push_back(clusters[i].ekf_state.bbox.x());
@@ -803,7 +805,6 @@ void ObstacleTrackerNode::publishPredictions(const std::vector<Cluster> &cluster
         {
             // Publish predicted position 
             geometry_msgs::msg::PoseStamped pred_pos_msg;
-            // pred_pos_msg.header.stamp = this->now();
             pred_pos_msg.header.stamp = pc_timestamp_;
             pred_pos_msg.header.frame_id = frame_id_; 
             pred_pos_msg.pose.position.x = initial_position[0];
@@ -812,7 +813,6 @@ void ObstacleTrackerNode::publishPredictions(const std::vector<Cluster> &cluster
             pred_pos_pub_->publish(pred_pos_msg);
 
             geometry_msgs::msg::TwistStamped pred_vel_msg;
-            // pred_vel_msg.header.stamp = this->now();
             pred_vel_msg.header.stamp = pc_timestamp_;
             pred_vel_msg.header.frame_id = frame_id_; 
             pred_vel_msg.twist.linear.x = initial_velocity[0];

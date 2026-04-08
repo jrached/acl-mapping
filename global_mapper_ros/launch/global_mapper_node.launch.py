@@ -92,7 +92,7 @@ def generate_launch_description():
             name='obstacle_tracker_node',
             emulate_tty=True,
             parameters=[parameters],
-            # prefix='xterm -e gdb -ex run --args', # gdb debugging
+            prefix='xterm -e gdb -ex run --args', # gdb debugging
             output='screen',
             remappings=[('point_cloud', f'dynamic_grid')],
         )
