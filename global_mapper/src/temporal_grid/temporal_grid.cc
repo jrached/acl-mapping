@@ -5,11 +5,15 @@
 
 namespace temporal_grid 
 {
-TemporalGrid::TemporalGrid(const double origin[3], const double world_dimensions[3], const float resolution, float occupied_threshold, float unoccupied_threshold) 
-: voxel_grid::VoxelGrid<std::vector<double>>(origin, world_dimensions, resolution), occupied_threshold_(occupied_threshold), unoccupied_threshold_(unoccupied_threshold), resolution_(resolution)
+TemporalGrid::TemporalGrid(const double origin[3], const double world_dimensions[3], const float resolution, float occupied_threshold, float unoccupied_threshold, int neighbor_radius, int static_neighbor_thresh) 
+: voxel_grid::VoxelGrid<std::vector<double>>(origin, world_dimensions, resolution), 
+occupied_threshold_(occupied_threshold),
+unoccupied_threshold_(unoccupied_threshold), 
+neighbor_radius_(neighbor_radius), 
+static_neighbor_thresh_(static_neighbor_thresh), 
+resolution_(resolution)
 {
-    // offsets_ = this->generateOffsets(2); // No false positives 
-    offsets_ = this->generateOffsets(1);
+    offsets_ = this->generateOffsets(neighbor_radius_);
 }
 
 void TemporalGrid::UpdateTemporalInfo(const int ind, const bool is_occupied, const bool is_unknown, const double timestamp)
@@ -118,9 +122,8 @@ bool TemporalGrid::IsDynamic(const int ind, bool is_occupied)
     if (voxel.size() != 0 && voxel[0] == 1.0 && is_occupied) // If free and occupied (i.e. either dynamic or noise)
     {
         int ixyz[3];
-        this->IndexToGrid(ind, ixyz); // TODO: Convert to grid indices instead 
-        // return !this->AreNeighborsStatic(ixyz, 1); // Filter out noise // No false positives 
-        return !this->AreNeighborsStatic(ixyz, 1); // Filter out noise  
+        this->IndexToGrid(ind, ixyz); 
+        return !this->AreNeighborsStatic(ixyz, static_neighbor_thresh_); // Filter out noise  
         return true;
     }
     return false; 

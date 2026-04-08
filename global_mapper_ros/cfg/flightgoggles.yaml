@@ -39,7 +39,11 @@ flight_goggles:
     #   target_altitude: 2.0  # target altitude [m]
 
     temporal_grid:
-      publish_dynamic_grid: true
+      publish_dynamic_grid: true               
+      occupied_thresh: 3.0                      # [s] How long a voxel needs to be occupied for it to be considered static 
+      unoccupied_thresh: 0.5                    # [s] How long a voxel needs to be unoccupied for it to be considered free space 
+      neighbor_radius: 2                        # [-] For n = (1 + 2 * r) ^ 3 number of neighbors to explore, neighbor radius is r
+      static_neighbor_thresh: 6                 # [-] Number of static neighbors for the current voxel to be considered static by association
 
     # Obstacle tracking/prediction parameters
     use_hardware: true 

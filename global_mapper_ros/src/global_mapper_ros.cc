@@ -60,7 +60,12 @@ namespace global_mapper_ros
     this->declare_parameter<int>("cost_grid.unknown_weight", 20);
     this->declare_parameter<int>("cost_grid.obstacle_weight", 10000);
     this->declare_parameter<double>("cost_grid.target_altitude", 2.0);
+    
     this->declare_parameter<bool>("temporal_grid.publish_dynamic_grid", true);
+    this->declare_parameter<double>("temporal_grid.occupied_thresh", 3.0); 
+    this->declare_parameter<double>("temporal_grid.unoccupied_thresh", 0.5); 
+    this->declare_parameter<int>("temporal_grid.neighbor_radius", 1); 
+    this->declare_parameter<int>("temporal_grid.static_neighbor_thresh", 1);
 
     fla_utils::SafeGetParam(*this, "global_frame", params_.global_frame);
     fla_utils::SafeGetParam(*this, "origin", params_.origin);
@@ -100,6 +105,10 @@ namespace global_mapper_ros
 
     // temporal_grid 
     fla_utils::SafeGetParam(*this, "temporal_grid.publish_dynamic_grid", publish_dynamic_grid_);
+    fla_utils::SafeGetParam(*this, "temporal_grid.occupied_thresh", params_.occupied_thresh);
+    fla_utils::SafeGetParam(*this, "temporal_grid.unoccupied_thresh", params_.unoccupied_thresh); 
+    fla_utils::SafeGetParam(*this, "temporal_grid.neighbor_radius", params_.neighbor_radius); 
+    fla_utils::SafeGetParam(*this, "temporal_grid.static_neighbor_thresh", params_.static_neighbor_thresh);
 
     // Print the parameters to the console
     RCLCPP_INFO(this->get_logger(), "Global Mapper Parameters:");

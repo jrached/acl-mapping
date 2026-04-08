@@ -3,10 +3,6 @@
 #include "occupancy_grid/occupancy_grid.h"
 #include "global_mapper/global_mapper.h"
 
-// TODO: Make occupancy thresholds parameters
-float OCCUPIED_THRESH = 3.0; 
-float UNOCCUPIED_THRESH = 0.5;
-
 
 namespace global_mapper
 {
@@ -16,7 +12,8 @@ namespace global_mapper
         distance_grid_(params_.origin.data(), params_.world_dimensions.data(), params_.resolution,
                        params_.truncation_distance),
         cost_grid_(params_.origin.data(), params_.world_dimensions.data(), params_.resolution), 
-        temporal_grid_(params_.origin.data(), params_.world_dimensions.data(), params_.resolution, OCCUPIED_THRESH, UNOCCUPIED_THRESH), data_ready_(0) // TODO: initialize temporal grid here
+        temporal_grid_(params_.origin.data(), params_.world_dimensions.data(), params_.resolution, params_.occupied_thresh, params_.unoccupied_thresh, params_.neighbor_radius, params_.static_neighbor_thresh), 
+        data_ready_(0) 
   {
     origin_[0] = 0.0;
     origin_[1] = 0.0;

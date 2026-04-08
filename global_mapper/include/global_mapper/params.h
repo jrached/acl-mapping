@@ -36,5 +36,12 @@ struct Params
   int inflation_weight = 0;
   int unknown_weight = 20;
   int obstacle_weight = 10000;
+
+  // temporal grid 
+  float occupied_thresh = 3.0; 
+  float unoccupied_thresh = 0.5;
+  int neighbor_radius = 1; 
+  int static_neighbor_thresh = 1; 
+  
 };
 }  // namespace global_mapper
