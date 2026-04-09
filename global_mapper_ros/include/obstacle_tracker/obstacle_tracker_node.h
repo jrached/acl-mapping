@@ -120,6 +120,7 @@ private:
     double prediction_dt_;
     double time_to_delete_old_obstacles_;
     double cluster_bbox_cutoff_size_;
+    double cluster_bbox_cutoff_len_;
     bool use_life_time_for_box_visualization_;
     double box_visualization_duration_;
     double dynus_map_res_;

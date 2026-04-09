@@ -1,14 +1,14 @@
 flight_goggles:
   ros__parameters:
 
-    # global_frame: world
+    global_frame: map
     origin: [1.53, -3.17, 0.82]  # [m]
     world_dimensions: [16.0, 16.0, 10.0]  # [m]  16   16   4
-    resolution: 0.3 # 0.3  # [m]   0.15
+    resolution: 0.3 # 0.3  # [m]  
     radius_drone: 0.41 # [m] THIS SHOULD BE HIGHER THAN THE RESOLUTION!!
     Ra: 11.3 # [m] radius of the first sphere (Sa) in the planner. The unknown pcloud published will only contain points inside this sphere
-    # z_ground: 0.1 #[m] points below z_ground are not published in the known grid
-    # skip: 0  #[pixels] Numbers of pixels to skip in the depth map. Should be >=0
+    z_ground: 0.1 #[m] points below z_ground are not published in the known grid
+    skip: 0  #[pixels] Numbers of pixels to skip in the depth map. Should be >=0
     depth_max: 15.0 #[m] In the depth image, points farther than depth_max, are treated as inf (i.e. along its ray (and up to that point) only unknown voxels are cleared. If doing simulation, this should be 5 (actually it should be the clipping distance of the depth image, but somehow it's always clipped at 5 meters)
     r1: 0.41 #[m] Points in the sphere centerd in the drone with r>r1 and r<r2 are published as unkown space
     r2: 11.3 #[m] See above
@@ -16,32 +16,32 @@ flight_goggles:
     z_max_unknown: 10.0 #[m] points above z_max_unkown are not published in the unkown grid
 
     occupancy_grid:
-    #   init_value: -1.0
+      publish_occupancy_grid: true
+      publish_unknown_grid: false
+      init_value: 0.0
       hit_inc: 0.6 #Was 0.4
       miss_inc: -0.1 #-0.2
       occupancy_threshold: 0.6  # [0.0, 1.0]
-    #   publish_occupancy_grid: true
-    #   publish_unknown_grid: true
-    #   clear_unknown_distance: 5.0  # [m]  #Nan ¿and inf? --> Clear the unkown voxels up to this distance
+      clear_unknown_distance: 5.0  # [m]  #Nan ¿and inf? --> Clear the unkown voxels up to this distance
 
-    # distance_grid:
-    #   truncation_distance: 6  # [voxels]
-    #   publish_distance_grid: false
+    distance_grid:
+      publish_distance_grid: false
+      truncation_distance: 6  # [voxels]
 
-    # cost_grid:
-    #   publish_cost_grid: false
-    #   publish_path: false
-    #   inflation_distance: 4  # inflate obstacles by this many squared voxels
-    #   altitude_weight: 20
-    #   inflation_weight: 0
-    #   unknown_weight: 20
-    #   obstacle_weight: 10000
-    #   target_altitude: 2.0  # target altitude [m]
+    cost_grid:
+      publish_cost_grid: false
+      publish_path: false
+      inflation_distance: 4  # inflate obstacles by this many squared voxels
+      altitude_weight: 20
+      inflation_weight: 0
+      unknown_weight: 20
+      obstacle_weight: 10000
+      target_altitude: 2.0  # target altitude [m]
 
     temporal_grid:
       publish_dynamic_grid: true               
       occupied_thresh: 3.0                      # [s] How long a voxel needs to be occupied for it to be considered static 
-      unoccupied_thresh: 0.5                    # [s] How long a voxel needs to be unoccupied for it to be considered free space 
+      unoccupied_thresh: 1.0 #0.5                    # [s] How long a voxel needs to be unoccupied for it to be considered free space 
       neighbor_radius: 2                        # [-] For n = (1 + 2 * r) ^ 3 number of neighbors to explore, neighbor radius is r
       static_neighbor_thresh: 6                 # [-] Number of static neighbors for the current voxel to be considered static by association
 
@@ -57,7 +57,8 @@ flight_goggles:
     prediction_horizon: 0.5                     # [s] Prediction horizon
     prediction_dt: 0.1                          # [s] Time step for the prediction
     time_to_delete_old_obstacles: 1.0 #5.0      # [s] Time to delete old obstacles
-    cluster_bbox_cutoff_size: 2.5               # [m] Size of the bounding box for the clustering
+    cluster_bbox_cutoff_size: 5.0               # [m] Length of the diagonal of the bounding box for the clustering
+    cluster_bbox_cutoff_len: 0.15               # [m] Size of the shortest bounding box side length 
     use_life_time_for_box_visualization: true   # [-] Use life time for the box visualization - if false, we keep the box until the end of the simulation
     box_visualization_duration: 0.1             # [s] Duration to visualize the bounding box
     velocity_threshold: 0.2                     # [m/s] Velocity threshold to characterize as dynamic obstacles

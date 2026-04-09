@@ -198,6 +198,7 @@ void ObstacleTrackerNode::declareAndsetParameters()
     this->declare_parameter("prediction_dt", 0.1);
     this->declare_parameter("time_to_delete_old_obstacles", 5.0);
     this->declare_parameter("cluster_bbox_cutoff_size", 3.0);
+    this->declare_parameter("cluster_bbox_cutoff_len", 0.1);
     this->declare_parameter("use_life_time_for_box_visualization", false);
     this->declare_parameter("box_visualization_duration", 3.0);
     this->declare_parameter("dynus_map_res", 0.5);
@@ -225,6 +226,7 @@ void ObstacleTrackerNode::declareAndsetParameters()
     prediction_dt_ = this->get_parameter("prediction_dt").as_double();
     time_to_delete_old_obstacles_ = this->get_parameter("time_to_delete_old_obstacles").as_double();
     cluster_bbox_cutoff_size_ = this->get_parameter("cluster_bbox_cutoff_size").as_double();
+    cluster_bbox_cutoff_len_ = this->get_parameter("cluster_bbox_cutoff_len").as_double();
     use_life_time_for_box_visualization_ = this->get_parameter("use_life_time_for_box_visualization").as_bool();
     box_visualization_duration_ = this->get_parameter("box_visualization_duration").as_double();
     dynus_map_res_ = this->get_parameter("dynus_map_res").as_double();
@@ -356,6 +358,11 @@ void ObstacleTrackerNode::pointcloudCallback(const sensor_msgs::msg::PointCloud2
         if (bbox.norm() > cluster_bbox_cutoff_size_)
         {
             continue;
+        }
+
+        // If shortest bounding box side length is too short, probably a spurious thin surface.
+        if (bbox.minCoeff() < cluster_bbox_cutoff_len_) {
+            continue; 
         }
 
         // Filter by density
