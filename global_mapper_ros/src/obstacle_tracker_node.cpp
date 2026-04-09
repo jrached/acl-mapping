@@ -575,32 +575,54 @@ void ObstacleTrackerNode::publishBoxes(const std::vector<Cluster> &clusters)
         current_velocity = Eigen::Vector3d(v * cos(phi) * cos(theta), v * cos(phi) * sin(theta), v * sin(phi));
         acceleration = Eigen::Vector3d(a * cos(phi) * cos(theta), a * cos(phi) * sin(theta), a * sin(phi));
 
-        // Create a CUBE marker to visualize the bounding box
+        const double cx = x;
+        const double cy = y;
+        const double cz = z;
+        const double hx = std::max(cluster.ekf_state.bbox[0], 0.05) * 0.5;
+        const double hy = std::max(cluster.ekf_state.bbox[1], 0.05) * 0.5;
+        const double hz = std::max(cluster.ekf_state.bbox[2], 0.05) * 0.5;
+
+        // --- Wireframe box (LINE_LIST: 12 edges = 24 points) ---
         visualization_msgs::msg::Marker marker;
+        marker.header.frame_id = frame_id_;
+        marker.header.stamp = pc_timestamp_;
+        marker.ns = "wireframe";
+        marker.id = marker_id_++;
+        marker.type = visualization_msgs::msg::Marker::LINE_LIST;
+        marker.action = visualization_msgs::msg::Marker::ADD;
         if (use_life_time_for_box_visualization_)
             marker.lifetime = rclcpp::Duration::from_seconds(box_visualization_duration_);
-        marker.header.frame_id = frame_id_;
-        marker.header.stamp = pc_timestamp_; 
-        marker.ns = "cluster_bounding_box";
-        marker.id = marker_id_++; // Ensure unique IDs for new markers
-        marker.type = visualization_msgs::msg::Marker::CUBE;
-        marker.action = visualization_msgs::msg::Marker::ADD;
-
-        // Set the position to the center of the bounding box
-        marker.pose.position.x = cluster.ekf_state.x[0];
-        marker.pose.position.y = cluster.ekf_state.x[1];
-        marker.pose.position.z = cluster.ekf_state.x[2];
-
-        // Set the scale to the size of the bounding box
-        marker.scale.x = cluster.ekf_state.bbox[0];
-        marker.scale.y = cluster.ekf_state.bbox[1];
-        marker.scale.z = cluster.ekf_state.bbox[2];
-
-        // Set the color
+        marker.scale.x = 0.06;  // edge thickness
         marker.color = cluster.ekf_state.color;
+        marker.color.a = 1.0f;
+        marker.pose.orientation.w = 1.0;
+        marker.points.reserve(24);
 
-        // Set alpha (transparency)
-        marker.color.a = 1.0;
+        auto addEdge = [&](double x1, double y1, double z1,
+                        double x2, double y2, double z2) {
+        geometry_msgs::msg::Point p1, p2;
+        p1.x = x1; p1.y = y1; p1.z = z1;
+        p2.x = x2; p2.y = y2; p2.z = z2;
+        marker.points.push_back(p1);
+        marker.points.push_back(p2);
+        };
+
+        // Bottom face
+        addEdge(cx-hx, cy-hy, cz-hz, cx+hx, cy-hy, cz-hz);
+        addEdge(cx+hx, cy-hy, cz-hz, cx+hx, cy+hy, cz-hz);
+        addEdge(cx+hx, cy+hy, cz-hz, cx-hx, cy+hy, cz-hz);
+        addEdge(cx-hx, cy+hy, cz-hz, cx-hx, cy-hy, cz-hz);
+        // Top face
+        addEdge(cx-hx, cy-hy, cz+hz, cx+hx, cy-hy, cz+hz);
+        addEdge(cx+hx, cy-hy, cz+hz, cx+hx, cy+hy, cz+hz);
+        addEdge(cx+hx, cy+hy, cz+hz, cx-hx, cy+hy, cz+hz);
+        addEdge(cx-hx, cy+hy, cz+hz, cx-hx, cy-hy, cz+hz);
+        // Vertical edges
+        addEdge(cx-hx, cy-hy, cz-hz, cx-hx, cy-hy, cz+hz);
+        addEdge(cx+hx, cy-hy, cz-hz, cx+hx, cy-hy, cz+hz);
+        addEdge(cx+hx, cy+hy, cz-hz, cx+hx, cy+hy, cz+hz);
+        addEdge(cx-hx, cy+hy, cz-hz, cx-hx, cy+hy, cz+hz);
+
 
         // Add the bounding box marker to the marker array
         if (current_velocity.norm() > velocity_threshold_ && (start_time_ - cluster.ekf_state.time_updated) < time_to_hide_obstacle_)
@@ -688,6 +710,20 @@ void ObstacleTrackerNode::publishPredictions(const std::vector<Cluster> &cluster
         {
             continue; 
         }
+
+        // Initialize prediction marker 
+        visualization_msgs::msg::Marker marker;
+        marker.header.frame_id = frame_id_;
+        marker.id = id++;
+        marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
+        marker.action = visualization_msgs::msg::Marker::ADD;
+        if (use_life_time_for_box_visualization_)
+            marker.lifetime = rclcpp::Duration::from_seconds(box_visualization_duration_);
+        marker.scale.x = 0.05;
+        marker.color = clusters[i].ekf_state.color;
+        marker.color.a = 1.0f;
+        marker.points.reserve(num_steps);
+
         
         double t = 0.0;
         for (int step = 0; step < num_steps; ++step)
@@ -721,49 +757,25 @@ void ObstacleTrackerNode::publishPredictions(const std::vector<Cluster> &cluster
             future_position[1] = current_position[1] + current_velocity[1] * dt + 0.5 * acceleration[1] * dt * dt;
             future_position[2] = current_position[2] + current_velocity[2] * dt + 0.5 * acceleration[2] * dt * dt;
 
+            // Update prediction line marker 
+            geometry_msgs::msg::Point pt;
+            pt.x = future_position[0];
+            pt.y = future_position[1];
+            pt.z = future_position[2];
+            marker.points.push_back(pt);
+
             // Store the time and position values
             t_values.push_back(t);
             x_values.push_back(future_position[0]);
             y_values.push_back(future_position[1]);
             z_values.push_back(future_position[2]);
 
-            // Create a marker to visualize the predicted position at this time step
-            visualization_msgs::msg::Marker marker;
-            marker.header.frame_id = frame_id_; // Ensure it's the correct frame
-            marker.id = id++;
-            marker.type = visualization_msgs::msg::Marker::ARROW;
-            marker.action = visualization_msgs::msg::Marker::ADD;
-
-            // Set arrow start (current position) and end (future position)
-            geometry_msgs::msg::Point start, end;
-            start.x = current_position[0];
-            start.y = current_position[1];
-            start.z = current_position[2];
-            end.x = future_position[0];
-            end.y = future_position[1];
-            end.z = future_position[2];
-
-            // Set arrow start and end points
-            marker.points.push_back(start);
-            marker.points.push_back(end);
-
-            // Set scale (arrow width and length)
-            marker.scale.x = 0.1;
-            marker.scale.y = 0.2;
-
-            // Set color (you can gradually fade it based on time step)
-            marker.color.r = clusters[i].ekf_state.color.r;
-            marker.color.g = clusters[i].ekf_state.color.g;
-            marker.color.b = clusters[i].ekf_state.color.b;
-            marker.color.a = clusters[i].ekf_state.color.a;
-
-            // Add this marker to the marker array
-            markers.markers.push_back(marker);
-
             // Update the current position and velocity for the next step
             current_position = future_position;
             current_velocity = future_velocity;
         }
+
+        markers.markers.push_back(marker);
 
         double x_diff = abs(x_values.front() - x_values.back());
         double y_diff = abs(y_values.front() - y_values.back());

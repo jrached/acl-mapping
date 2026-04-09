@@ -54,7 +54,7 @@ flight_goggles:
     cluster_tolerance: 0.3                      # [m] Maximum distance from cluster for a point to be considered a member of that cluster 
     min_cluster_size: 10 #15 #8                 # [-] Minimum cluster pointcloud size
     max_cluster_size: 1000                      # [-] Maximum cluster pointcloud size
-    prediction_horizon: 0.5                     # [s] Prediction horizon
+    prediction_horizon: 1.0 #0.5                # [s] Prediction horizon
     prediction_dt: 0.1                          # [s] Time step for the prediction
     time_to_delete_old_obstacles: 1.0 #5.0      # [s] Time to delete old obstacles
     cluster_bbox_cutoff_size: 5.0               # [m] Length of the diagonal of the bounding box for the clustering
