@@ -131,6 +131,51 @@ int associate_gridnet_est_with_ekf(const Eigen::Vector3d &gridnet_pos, const std
     return closest_ekf_idx;
 }
 
+dynus_interfaces::msg::PWPTraj convertPwp2PwpMsg(const PieceWisePol &pwp)
+  {
+    dynus_interfaces::msg::PWPTraj pwp_msg;
+
+    for (int i = 0; i < pwp.times.size(); i++)
+    {
+      pwp_msg.times.push_back(pwp.times[i]);
+    }
+
+    // push x
+    for (auto coeff_x_i : pwp.coeff_x)
+    {
+      dynus_interfaces::msg::CoeffPoly3 coeff_poly3;
+      coeff_poly3.a = coeff_x_i(0);
+      coeff_poly3.b = coeff_x_i(1);
+      coeff_poly3.c = coeff_x_i(2);
+      coeff_poly3.d = coeff_x_i(3);
+      pwp_msg.coeff_x.push_back(coeff_poly3);
+    }
+
+    // push y
+    for (auto coeff_y_i : pwp.coeff_y)
+    {
+      dynus_interfaces::msg::CoeffPoly3 coeff_poly3;
+      coeff_poly3.a = coeff_y_i(0);
+      coeff_poly3.b = coeff_y_i(1);
+      coeff_poly3.c = coeff_y_i(2);
+      coeff_poly3.d = coeff_y_i(3);
+      pwp_msg.coeff_y.push_back(coeff_poly3);
+    }
+
+    // push z
+    for (auto coeff_z_i : pwp.coeff_z)
+    {
+      dynus_interfaces::msg::CoeffPoly3 coeff_poly3;
+      coeff_poly3.a = coeff_z_i(0);
+      coeff_poly3.b = coeff_z_i(1);
+      coeff_poly3.c = coeff_z_i(2);
+      coeff_poly3.d = coeff_z_i(3);
+      pwp_msg.coeff_z.push_back(coeff_poly3);
+    }
+
+    return pwp_msg;
+  }
+
 // ObstacleTrackerNode constructor
 ObstacleTrackerNode::ObstacleTrackerNode() : Node("obstacle_tracker_node")
 {
@@ -170,7 +215,7 @@ ObstacleTrackerNode::ObstacleTrackerNode() : Node("obstacle_tracker_node")
     pub_unc_sphere_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("uncertainty_spheres", 10);
 
     // Publish predicted trajectory
-    // pub_predicted_traj_ = this->create_publisher<dynus_interfaces::msg::DynTraj>("predicted_trajs", 10);
+    pub_predicted_traj_ = this->create_publisher<dynus_interfaces::msg::DynTraj>("predicted_trajs", 10);
 
     // Publish predicted position and velocity 
     pred_pos_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("pred_pos", 10);
@@ -512,8 +557,6 @@ void ObstacleTrackerNode::getCentroidsAndSizesOfClusters(const pcl::PointCloud<p
 void ObstacleTrackerNode::publishBoxes(const std::vector<Cluster> &clusters)
 {
 
-    // printf("publishBoxes called with %zu clusters\n", clusters.size());
-
     visualization_msgs::msg::MarkerArray cluster_markers;
     visualization_msgs::msg::MarkerArray unc_sphere_markers;
 
@@ -738,69 +781,69 @@ void ObstacleTrackerNode::publishPredictions(const std::vector<Cluster> &cluster
             continue;
         }
 
-        // // Fit a polynomial to the predicted positions
-        // Eigen::VectorXd beta_x = polyfit(t_values, x_values, degree_for_pwp_);
-        // Eigen::VectorXd beta_y = polyfit(t_values, y_values, degree_for_pwp_);
-        // Eigen::VectorXd beta_z = polyfit(t_values, z_values, degree_for_pwp_);
+        // Fit a polynomial to the predicted positions
+        Eigen::VectorXd beta_x = polyfit(t_values, x_values, degree_for_pwp_);
+        Eigen::VectorXd beta_y = polyfit(t_values, y_values, degree_for_pwp_);
+        Eigen::VectorXd beta_z = polyfit(t_values, z_values, degree_for_pwp_);
 
-        // // Calculate variance of the residuals
-        // double variance_x = calculateVariance(t_values, x_values, beta_x, degree_for_pwp_);
-        // double variance_y = calculateVariance(t_values, y_values, beta_y, degree_for_pwp_);
-        // double variance_z = calculateVariance(t_values, z_values, beta_z, degree_for_pwp_);
+        // Calculate variance of the residuals
+        double variance_x = calculateVariance(t_values, x_values, beta_x, degree_for_pwp_);
+        double variance_y = calculateVariance(t_values, y_values, beta_y, degree_for_pwp_);
+        double variance_z = calculateVariance(t_values, z_values, beta_z, degree_for_pwp_);
 
-        // // Convert t_values, beta_x, beta_y, beta_z to PieceWisePol
-        // PieceWisePol pwp;
-        // double current_time = this->now().seconds();
-        // pwp.times.push_back(current_time);
-        // pwp.times.push_back(current_time + prediction_horizon_);
-        // pwp.coeff_x.push_back({beta_x(0), beta_x(1), beta_x(2), beta_x(3)});
-        // pwp.coeff_y.push_back({beta_y(0), beta_y(1), beta_y(2), beta_y(3)});
-        // pwp.coeff_z.push_back({beta_z(0), beta_z(1), beta_z(2), beta_z(3)});
+        // Convert t_values, beta_x, beta_y, beta_z to PieceWisePol
+        PieceWisePol pwp;
+        double current_time = this->now().seconds();
+        pwp.times.push_back(current_time);
+        pwp.times.push_back(current_time + prediction_horizon_);
+        pwp.coeff_x.push_back({beta_x(0), beta_x(1), beta_x(2), beta_x(3)});
+        pwp.coeff_y.push_back({beta_y(0), beta_y(1), beta_y(2), beta_y(3)});
+        pwp.coeff_z.push_back({beta_z(0), beta_z(1), beta_z(2), beta_z(3)});
 
-        // // Fit a quintic polynomial to the predicted positions
-        // Eigen::VectorXd beta_x_quintic = polyfit(t_values, x_values, degree_for_poly_);
-        // Eigen::VectorXd beta_y_quintic = polyfit(t_values, y_values, degree_for_poly_);
-        // Eigen::VectorXd beta_z_quintic = polyfit(t_values, z_values, degree_for_poly_);
+        // Fit a quintic polynomial to the predicted positions
+        Eigen::VectorXd beta_x_quintic = polyfit(t_values, x_values, degree_for_poly_);
+        Eigen::VectorXd beta_y_quintic = polyfit(t_values, y_values, degree_for_poly_);
+        Eigen::VectorXd beta_z_quintic = polyfit(t_values, z_values, degree_for_poly_);
 
-        // // Publish DynTraj message with the predicted trajectory
-        // dynus_interfaces::msg::DynTraj msg;
-        // msg.header.stamp = pc_timestamp_;
-        // msg.header.frame_id = frame_id_;
-        // msg.id = clusters[i].ekf_state.id;
-        // msg.bbox.push_back(clusters[i].ekf_state.bbox.x());
-        // msg.bbox.push_back(clusters[i].ekf_state.bbox.y());
-        // msg.bbox.push_back(clusters[i].ekf_state.bbox.z());
-        // msg.pwp = dynus_utils::convertPwp2PwpMsg(pwp);
-        // msg.ekf_cov_p.push_back(clusters[i].ekf_state.P(0, 0));
-        // msg.ekf_cov_p.push_back(clusters[i].ekf_state.P(1, 1));
-        // msg.ekf_cov_p.push_back(clusters[i].ekf_state.P(2, 2));
-        // msg.ekf_cov_q.push_back(clusters[i].ekf_state.Q(0, 0));
-        // msg.ekf_cov_q.push_back(clusters[i].ekf_state.Q(1, 1));
-        // msg.ekf_cov_q.push_back(clusters[i].ekf_state.Q(2, 2));
-        // msg.ekf_cov_r.push_back(clusters[i].ekf_state.R(0, 0));
-        // msg.ekf_cov_r.push_back(clusters[i].ekf_state.R(1, 1));
-        // msg.ekf_cov_r.push_back(clusters[i].ekf_state.R(2, 2));
-        // msg.poly_cov.push_back(variance_x);
-        // msg.poly_cov.push_back(variance_y);
-        // msg.poly_cov.push_back(variance_z);
+        // Publish DynTraj message with the predicted trajectory
+        dynus_interfaces::msg::DynTraj msg;
+        msg.header.stamp = pc_timestamp_;
+        msg.header.frame_id = frame_id_;
+        msg.id = clusters[i].ekf_state.id;
+        msg.bbox.push_back(clusters[i].ekf_state.bbox.x());
+        msg.bbox.push_back(clusters[i].ekf_state.bbox.y());
+        msg.bbox.push_back(clusters[i].ekf_state.bbox.z());
+        msg.pwp = convertPwp2PwpMsg(pwp);
+        msg.ekf_cov_p.push_back(clusters[i].ekf_state.P(0, 0));
+        msg.ekf_cov_p.push_back(clusters[i].ekf_state.P(1, 1));
+        msg.ekf_cov_p.push_back(clusters[i].ekf_state.P(2, 2));
+        msg.ekf_cov_q.push_back(clusters[i].ekf_state.Q(0, 0));
+        msg.ekf_cov_q.push_back(clusters[i].ekf_state.Q(1, 1));
+        msg.ekf_cov_q.push_back(clusters[i].ekf_state.Q(2, 2));
+        msg.ekf_cov_r.push_back(clusters[i].ekf_state.R(0, 0));
+        msg.ekf_cov_r.push_back(clusters[i].ekf_state.R(1, 1));
+        msg.ekf_cov_r.push_back(clusters[i].ekf_state.R(2, 2));
+        msg.poly_cov.push_back(variance_x);
+        msg.poly_cov.push_back(variance_y);
+        msg.poly_cov.push_back(variance_z);
 
-        // // coefficients for quintic polynomial
-        // msg.poly_coeffs_x.clear();
-        // msg.poly_coeffs_y.clear();
-        // msg.poly_coeffs_z.clear();
-        // for (int j = 0; j < degree_for_poly_ + 1; ++j)
-        // {
-        //     msg.poly_coeffs_x.push_back(beta_x_quintic(j));
-        //     msg.poly_coeffs_y.push_back(beta_y_quintic(j));
-        //     msg.poly_coeffs_z.push_back(beta_z_quintic(j));
-        // }
+        // coefficients for quintic polynomial
+        msg.poly_coeffs_x.clear();
+        msg.poly_coeffs_y.clear();
+        msg.poly_coeffs_z.clear();
+        for (int j = 0; j < degree_for_poly_ + 1; ++j)
+        {
+            msg.poly_coeffs_x.push_back(beta_x_quintic(j));
+            msg.poly_coeffs_y.push_back(beta_y_quintic(j));
+            msg.poly_coeffs_z.push_back(beta_z_quintic(j));
+        }
 
-        // // Set the start and end times for the trajectory
-        // msg.poly_start_time = current_time;
-        // msg.poly_end_time = current_time + prediction_horizon_;
+        // Set the start and end times for the trajectory
+        msg.poly_start_time = current_time;
+        msg.poly_end_time = current_time + prediction_horizon_;
 
-        // msg.is_agent = false;
-        // pub_predicted_traj_->publish(msg);
+        msg.is_agent = false;
+        pub_predicted_traj_->publish(msg);
 
         // Clear the vectors for the next EKF state
         t_values.clear();
@@ -885,9 +928,9 @@ void ObstacleTrackerNode::filterStaticObstacles()
 {
     for (auto it = ekf_states_.begin(); it != ekf_states_.end();)
     {
-        Eigen::Vector3d velocity = it->x.segment<3>(3); // Extract velocity from the state vector (elements 3,4,5)
-        Eigen::Vector3d acceleration = it->x.segment<3>(6); // Extract acceleration from the state vector (elements 6,7,8)
-        if (velocity.norm() < velocity_threshold_ && acceleration.norm() < acceleration_threshold_)
+        double velocity = it->x[5]; // Extract velocity from the state vector
+        double acceleration = it->x[6]; // Extract acceleration from the state vector 
+        if (velocity < velocity_threshold_ && acceleration < acceleration_threshold_)
         {
             // If the velocity is below the threshold, consider the obstacle static and remove it
             it = ekf_states_.erase(it);

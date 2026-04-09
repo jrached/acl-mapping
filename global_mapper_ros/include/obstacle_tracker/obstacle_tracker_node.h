@@ -20,6 +20,10 @@
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <geometry_msgs/msg/pose_array.hpp> 
 
+#include <dynus_interfaces/msg/dyn_traj.hpp>
+#include <dynus_interfaces/msg/pwp_traj.hpp>
+#include <dynus_interfaces/msg/coeff_poly3.hpp>
+
 #include <obstacle_tracker/utils.h>
 
 // EKF Parameters for 3D
@@ -144,7 +148,7 @@ private:
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_pointcloud_;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_markers_;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_bboxes_;
-    // rclcpp::Publisher<dynus_interfaces::msg::DynTraj>::SharedPtr pub_predicted_traj_;
+    rclcpp::Publisher<dynus_interfaces::msg::DynTraj>::SharedPtr pub_predicted_traj_;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_unc_sphere_;
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pred_pos_pub_;
     rclcpp::Publisher<geometry_msgs::msg::TwistStamped>::SharedPtr pred_vel_pub_;
@@ -186,6 +190,152 @@ private:
     void resetEKFassignments();
     void gridnetCallback(const geometry_msgs::msg::PoseArray::SharedPtr msg);
 
+};
+
+struct PieceWisePol
+{
+  // Interval 0: t\in[t0, t1)
+  // Interval 1: t\in[t1, t2)
+  // Interval 2: t\in[t2, t3)
+  //...
+  // Interval n-1: t\in[tn, tn+1)
+
+  // n intervals in total
+
+  // times has n+1 elements
+  std::vector<double> times; // [t0,t1,t2,...,tn+1]
+
+  // coefficients has n elements
+  // The coeffients are such that pol(t)=coeff_of_that_interval*[u^3 u^2 u 1]
+  // with u=(t-t_min_that_interval)/(t_max_that_interval- t_min_that_interval)
+  std::vector<Eigen::Matrix<double, 4, 1>> coeff_x; // [a b c d]' of Int0 , [a b c d]' of Int1,...
+  std::vector<Eigen::Matrix<double, 4, 1>> coeff_y; // [a b c d]' of Int0 , [a b c d]' of Int1,...
+  std::vector<Eigen::Matrix<double, 4, 1>> coeff_z; // [a b c d]' of Int0 , [a b c d]' of Int1,...
+
+  void clear()
+  {
+    times.clear();
+    coeff_x.clear();
+    coeff_y.clear();
+    coeff_z.clear();
+  }
+
+  // Get the end time of the trajectory
+  double getEndTime() const
+  {
+    return times.back();
+  }
+
+  Eigen::Vector3d eval(double t) const
+  {
+    Eigen::Vector3d result;
+
+    // return the last value of the polynomial in the last interval
+    if (t >= times.back())
+    {
+      Eigen::Matrix<double, 4, 1> tmp;
+      // double u = 1;
+      double u = times.back() - times[times.size() - 2];
+      tmp << u * u * u, u * u, u, 1.0;
+      result.x() = coeff_x.back().transpose() * tmp;
+      result.y() = coeff_y.back().transpose() * tmp;
+      result.z() = coeff_z.back().transpose() * tmp;
+      return result;
+    }
+
+    // return the first value of the polynomial in the first interval
+    if (t < times.front())
+    {
+      Eigen::Matrix<double, 4, 1> tmp;
+      double u = 0;
+      tmp << u * u * u, u * u, u, 1.0;
+      result.x() = coeff_x.front().transpose() * tmp;
+      result.y() = coeff_y.front().transpose() * tmp;
+      result.z() = coeff_z.front().transpose() * tmp;
+      return result;
+    }
+
+    // Find the interval where t is
+    //(times - 1) is the number of intervals
+    for (int i = 0; i < (times.size() - 1); i++)
+    {
+      if (times[i] <= t && t < times[i + 1])
+      {
+        // double u = (t - times[i]) / (times[i + 1] - times[i]);
+        double u = t - times[i];
+
+        // TODO: This is hand-coded for a third-degree polynomial
+        Eigen::Matrix<double, 4, 1> tmp;
+        tmp << u * u * u, u * u, u, 1.0;
+
+        result.x() = coeff_x[i].transpose() * tmp;
+        result.y() = coeff_y[i].transpose() * tmp;
+        result.z() = coeff_z[i].transpose() * tmp;
+
+        break;
+      }
+    }
+    return result;
+  }
+
+  Eigen::Vector3d velocity(double t) const
+  {
+    Eigen::Vector3d vel;
+
+    // Handle the case where t is after the last interval
+    if (t >= times.back())
+    {
+      double u = times.back() - times[times.size() - 2];
+      vel.x() = 3 * coeff_x.back()(0) * u * u + 2 * coeff_x.back()(1) * u + coeff_x.back()(2);
+      vel.y() = 3 * coeff_y.back()(0) * u * u + 2 * coeff_y.back()(1) * u + coeff_y.back()(2);
+      vel.z() = 3 * coeff_z.back()(0) * u * u + 2 * coeff_z.back()(1) * u + coeff_z.back()(2);
+      return vel;
+    }
+
+    // Handle the case where t is before the first interval
+    if (t < times.front())
+    {
+      vel.x() = coeff_x.front()(2);
+      vel.y() = coeff_y.front()(2);
+      vel.z() = coeff_z.front()(2);
+      return vel;
+    }
+
+    // Find the interval where t lies and calculate velocity
+    for (int i = 0; i < (times.size() - 1); i++)
+    {
+      if (times[i] <= t && t < times[i + 1])
+      {
+        double u = t - times[i];
+        vel.x() = 3 * coeff_x[i](0) * u * u + 2 * coeff_x[i](1) * u + coeff_x[i](2);
+        vel.y() = 3 * coeff_y[i](0) * u * u + 2 * coeff_y[i](1) * u + coeff_y[i](2);
+        vel.z() = 3 * coeff_z[i](0) * u * u + 2 * coeff_z[i](1) * u + coeff_z[i](2);
+        break;
+      }
+    }
+
+    return vel;
+  }
+
+  void print()
+  {
+    std::cout << "coeff_x.size()= " << coeff_x.size() << std::endl;
+    std::cout << "times.size()= " << times.size() << std::endl;
+    std::cout << "Note that coeff_x.size() == times.size()-1" << std::endl;
+
+    for (int i = 0; i < times.size(); i++)
+    {
+      printf("Time: %f\n", times[i]);
+    }
+
+    for (int i = 0; i < (times.size() - 1); i++)
+    {
+      std::cout << "From " << times[i] << " to " << times[i + 1] << std::endl;
+      std::cout << "  Coeff_x= " << coeff_x[i].transpose() << std::endl;
+      std::cout << "  Coeff_y= " << coeff_y[i].transpose() << std::endl;
+      std::cout << "  Coeff_z= " << coeff_z[i].transpose() << std::endl;
+    }
+  }
 };
 
 #endif // OBSTACLE_TRACKER_NODE_HPP

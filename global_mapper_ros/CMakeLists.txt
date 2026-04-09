@@ -39,7 +39,7 @@ find_package(visualization_msgs       REQUIRED)
 find_package(image_transport          REQUIRED)
 find_package(cv_bridge                REQUIRED)
 find_package(fla_interfaces           REQUIRED)
-#find_package(dynus_interfaces           REQUIRED)
+find_package(dynus_interfaces           REQUIRED)
 find_package(builtin_interfaces       REQUIRED)
 find_package(Eigen3                   REQUIRED)
 find_package(rosidl_typesupport_c REQUIRED)
@@ -124,6 +124,7 @@ ament_target_dependencies(obstacle_tracker_node
   pcl_conversions 
   tf2_geometry_msgs 
   tf2_eigen
+  dynus_interfaces
 )
 
 target_link_libraries(obstacle_tracker_node 

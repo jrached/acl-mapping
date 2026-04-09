@@ -41,7 +41,7 @@ flight_goggles:
     temporal_grid:
       publish_dynamic_grid: true               
       occupied_thresh: 3.0                      # [s] How long a voxel needs to be occupied for it to be considered static 
-      unoccupied_thresh: 1.0 #0.5                    # [s] How long a voxel needs to be unoccupied for it to be considered free space 
+      unoccupied_thresh: 1.0 #0.5               # [s] How long a voxel needs to be unoccupied for it to be considered free space 
       neighbor_radius: 2                        # [-] For n = (1 + 2 * r) ^ 3 number of neighbors to explore, neighbor radius is r
       static_neighbor_thresh: 6                 # [-] Number of static neighbors for the current voxel to be considered static by association
 
@@ -62,7 +62,7 @@ flight_goggles:
     use_life_time_for_box_visualization: true   # [-] Use life time for the box visualization - if false, we keep the box until the end of the simulation
     box_visualization_duration: 0.1             # [s] Duration to visualize the bounding box
     velocity_threshold: 0.2                     # [m/s] Velocity threshold to characterize as dynamic obstacles
-    acceleration_threshold: 0.1                 # [m/s2] Acceleration threshold to characterize as dynamic obstacles
+    acceleration_threshold: 0.5                 # [m/s2] Acceleration threshold to characterize as dynamic obstacles
     bbox_density: 10.0 #15.0 #8                 # [1/m] Minimum bounding box point density for detection to not be treated as noise. Computed as num_points / diag_len
     use_gridnet: true
     alpha: 0.05 

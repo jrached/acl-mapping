@@ -7,12 +7,9 @@
 #include <geometry_msgs/msg/point.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
-// #include <dgp/data_utils.hpp>
-// #include <dgp/termcolor.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <pcl/point_types.h>
 #include <pcl/kdtree/kdtree_flann.h>
-// #include "dynus/dynus_type.hpp"
 #include <deque>
 
 #define RED 1
@@ -37,123 +34,6 @@
 
 #define OCCUPIED_SPACE 1
 #define UNKOWN_AND_OCCUPIED_SPACE 2
-
-
-// struct state
-// {
-
-//   // time stamp
-//   double t = 0.0;
-
-//   // pos, vel, accel, jerk, yaw, dyaw
-//   Eigen::Vector3d pos = Eigen::Vector3d::Zero();
-//   Eigen::Vector3d vel = Eigen::Vector3d::Zero();
-//   Eigen::Vector3d accel = Eigen::Vector3d::Zero();
-//   Eigen::Vector3d jerk = Eigen::Vector3d::Zero();
-//   double yaw = 0.0;
-//   double dyaw = 0.0;
-
-//   // flag for tracking
-//   bool use_tracking_yaw = false;
-
-//   void setTimeStamp(const double data)
-//   {
-//     t = data;
-//   }
-
-//   void setPos(const double x, const double y, const double z)
-//   {
-//     pos << x, y, z;
-//   }
-//   void setVel(const double x, const double y, const double z)
-//   {
-//     vel << x, y, z;
-//   }
-//   void setAccel(const double x, const double y, const double z)
-//   {
-//     accel << x, y, z;
-//   }
-
-//   void setJerk(const double x, const double y, const double z)
-//   {
-//     jerk << x, y, z;
-//   }
-
-//   void setPos(const Eigen::Vector3d &data)
-//   {
-//     pos << data.x(), data.y(), data.z();
-//   }
-
-//   void setVel(const Eigen::Vector3d &data)
-//   {
-//     vel << data.x(), data.y(), data.z();
-//   }
-
-//   void setAccel(const Eigen::Vector3d &data)
-//   {
-//     accel << data.x(), data.y(), data.z();
-//   }
-
-//   void setJerk(const Eigen::Vector3d &data)
-//   {
-//     jerk << data.x(), data.y(), data.z();
-//   }
-
-//   void setState(const Eigen::Vector3d &pos, const Eigen::Vector3d &vel, const Eigen::Vector3d &accel, const Eigen::Vector3d &jerk)
-//   {
-//     this->pos = pos;
-//     this->vel = vel;
-//     this->accel = accel;
-//     this->jerk = jerk;
-//   }
-
-//   void setYaw(const double data)
-//   {
-//     yaw = data;
-//   }
-
-//   void setDYaw(const double data)
-//   {
-//     dyaw = data;
-//   }
-
-//   void setZero()
-//   {
-//     pos = Eigen::Vector3d::Zero();
-//     vel = Eigen::Vector3d::Zero();
-//     accel = Eigen::Vector3d::Zero();
-//     jerk = Eigen::Vector3d::Zero();
-//     yaw = 0;
-//     dyaw = 0;
-//   }
-
-//   void printPos()
-//   {
-//     std::cout << "Pos= " << pos.transpose() << std::endl;
-//   }
-
-//   void print()
-//   {
-//     std::cout << "Time= " << t << std::endl;
-//     std::cout << "Pos= " << pos.transpose() << std::endl;
-//     std::cout << "Vel= " << vel.transpose() << std::endl;
-//     std::cout << "Accel= " << accel.transpose() << std::endl;
-//   }
-
-//   void printHorizontal()
-//   {
-//     std::cout << "Pos, Vel, Accel, Jerk= " << pos.transpose() << " " << vel.transpose() << " " << accel.transpose()
-//               << " " << jerk.transpose() << std::endl;
-//   }
-// };
-
-// void printStateDeque(std::deque<state>& data);
-
-// void printStateVector(std::vector<state>& data);
-
-// void vectorOfVectors2MarkerArray(vec_Vecf<3> traj, visualization_msgs::msg::MarkerArray* m_array, std_msgs::msg::ColorRGBA color,
-//                                  int type = visualization_msgs::msg::Marker::ARROW,
-//                                  std::vector<double> radii = std::vector<double>());
 
 std_msgs::msg::ColorRGBA getColorJet(double v, double vmin, double vmax);
 
