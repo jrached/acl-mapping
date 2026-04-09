@@ -176,24 +176,24 @@ namespace global_mapper_ros
 
     if (publish_unknown_grid_)
     {
-      unknown_grid_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("unknown_grid_topic", 10);
-      frontier_grid_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("frontier_grid_topic", 10);
+      unknown_grid_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("unknown_grid_topic", sensor_qos);
+      frontier_grid_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("frontier_grid_topic", sensor_qos);
     }
 
     if (publish_distance_grid_)
     {
-      dist_grid_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("distance_grid_topic", 10);
+      dist_grid_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("distance_grid_topic", sensor_qos);
     }
 
     if (publish_cost_grid_)
     {
-      cost_grid_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("cost_grid_topic", 10);
+      cost_grid_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("cost_grid_topic", sensor_qos);
     }
 
     if (publish_path_)
     {
-      path_pub_ = this->create_publisher<nav_msgs::msg::Path>("path_topic", 10);
-      sparse_path_pub_ = this->create_publisher<nav_msgs::msg::Path>("sparse_path_topic", 10);
+      path_pub_ = this->create_publisher<nav_msgs::msg::Path>("path_topic", sensor_qos);
+      sparse_path_pub_ = this->create_publisher<nav_msgs::msg::Path>("sparse_path_topic", sensor_qos);
     }
 
     if (publish_dynamic_grid_)
@@ -548,7 +548,8 @@ namespace global_mapper_ros
       double xyz[3] = {0.0};
       int ixyz[3] = {0};
 
-      pcl::PointCloud<pcl::PointXYZ> local_cloud; 
+      pcl::PointCloud<pcl::PointXYZ> local_dynamic_cloud; 
+      pcl::PointCloud<pcl::PointXYZ> local_static_cloud; 
       #pragma omp for nowait 
       for (size_t i = 0; i < cloud_->size(); ++i) 
       {
@@ -567,7 +568,12 @@ namespace global_mapper_ros
           {
             if (xyz[2] > params_.z_ground) // only publish points above the ground
             {
-              local_cloud.push_back(pcl::PointXYZ(pt.x, pt.y, pt.z)); // replace with emplace_back (slightly more optimized according to chat)
+              local_dynamic_cloud.push_back(pcl::PointXYZ(pt.x, pt.y, pt.z)); // replace with emplace_back (slightly more optimized according to chat)
+            }
+          } else { 
+            if (xyz[2] > params_.z_ground) // only publish points above the ground
+            {
+              local_static_cloud.push_back(pcl::PointXYZ(pt.x, pt.y, pt.z)); // replace with emplace_back (slightly more optimized according to chat)
             }
           }
         }
@@ -575,72 +581,19 @@ namespace global_mapper_ros
 
       #pragma omp critical
       {
-        dynamic_cloud += local_cloud; 
+        dynamic_cloud += local_dynamic_cloud; 
+        static_cloud += local_static_cloud;
       }
     }
-
-
-
-
-    // int grid_dimensions[3];
-    // global_mapper_ptr_->occupancy_grid_.GetGridDimensions(grid_dimensions);
-
-    // // xyz[0] = 0.0;
-    // // xyz[1] = 0.0; 
-    // // xyz[2] = 0.0;
-
-    // #pragma omp parallel
-    // {
-    //   double xyz[3] = {0.0};
-    //   int ixyz[3] = {0};
-
-    //   pcl::PointCloud<pcl::PointXYZ> local_cloud; 
-    //   #pragma omp for collapse(3) nowait 
-    //   for (int x = 0; x < grid_dimensions[0]; x++)
-    //   {
-    //     for (int y = 0; y < grid_dimensions[1]; y++)
-    //     {
-    //       for (int z = 0; z < grid_dimensions[2]; z++)
-    //       {
-    //         ixyz[0] = x;
-    //         ixyz[1] = y;
-    //         ixyz[2] = z; 
-
-    //         float occupancy_value = global_mapper_ptr_->occupancy_grid_.ReadValue(ixyz);
-    //         bool is_occupied = global_mapper_ptr_->occupancy_grid_.IsOccupied(occupancy_value); 
-    //         bool is_dynamic = global_mapper_ptr_->temporal_grid_.IsDynamic(ixyz, is_occupied);
-    //         if (is_occupied)
-    //         {
-    //           global_mapper_ptr_->occupancy_grid_.GridToWorld(ixyz, xyz);
-    //           if (!is_dynamic)
-    //           {
-    //             if (xyz[2] > params_.z_ground) // only publish points above the ground
-    //             {
-    //               local_cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
-    //             }
-    //           }
-    //         }
-    //       }
-    //     }
-    //   }
-
-    //   #pragma omp critical 
-    //   {
-    //     static_cloud += local_cloud;
-    //   }
-    // }
-
-    // lock.unlock();
 
     // Publish clouds 
     pcl::toROSMsg(dynamic_cloud, *dynamic_pointcloud);
     dynamic_pointcloud->header.frame_id = "map";
-    // dynamic_pointcloud->header.stamp = rclcpp::Clock().now();
     dynamic_pointcloud->header.stamp = pc_stamp_;
 
-    // pcl::toROSMsg(static_cloud, *static_pointcloud);
-    // static_pointcloud->header.frame_id = "map";
-    // static_pointcloud->header.stamp = rclcpp::Clock().now();
+    pcl::toROSMsg(static_cloud, *static_pointcloud);
+    static_pointcloud->header.frame_id = "map";
+    static_pointcloud->header.stamp = pc_stamp_;
 }                                    
 
   // might be good to add more debug warnings, e.g dense and sparse paths are emtpy
@@ -655,53 +608,53 @@ namespace global_mapper_ros
 
     global_mapper_ptr_->GetVoxelGrids(&occupancy_grid, &distance_grid, &cost_grid, &temporal_grid);
 
-    // if (publish_occupancy_grid_)
-    // {
-    //   sensor_msgs::msg::PointCloud2 occ_pointcloud_msg;
-    //   // alternate msg format as suggested by chat
-    //   // auto occ_pointcloud_msg = std::make_shared<sensor_msgs::msg::PointCloud2>();
-    //   PopulateOccupancyPointCloudMsg(occupancy_grid, &occ_pointcloud_msg);
-    //   occ_grid_pub_->publish(occ_pointcloud_msg);
-    // }
+    if (publish_occupancy_grid_)
+    {
+      sensor_msgs::msg::PointCloud2 occ_pointcloud_msg;
+      // alternate msg format as suggested by chat
+      // auto occ_pointcloud_msg = std::make_shared<sensor_msgs::msg::PointCloud2>();
+      PopulateOccupancyPointCloudMsg(occupancy_grid, &occ_pointcloud_msg);
+      occ_grid_pub_->publish(occ_pointcloud_msg);
+    }
 
-    // if (publish_unknown_grid_)
-    // {
-    //   sensor_msgs::msg::PointCloud2 unknown_pointcloud_msg;
-    //   // sensor_msgs::PointCloud2 frontier_pointcloud_msg;
-    //   // PopulateUnknownPointCloudMsg(occupancy_grid, &unknown_pointcloud_msg, &frontier_pointcloud_msg);
-    //   PopulateUnknownPointCloudMsg(occupancy_grid, &unknown_pointcloud_msg);
-    //   unknown_grid_pub_->publish(unknown_pointcloud_msg);
-    // }
+    if (publish_unknown_grid_)
+    {
+      sensor_msgs::msg::PointCloud2 unknown_pointcloud_msg;
+      // sensor_msgs::PointCloud2 frontier_pointcloud_msg;
+      // PopulateUnknownPointCloudMsg(occupancy_grid, &unknown_pointcloud_msg, &frontier_pointcloud_msg);
+      PopulateUnknownPointCloudMsg(occupancy_grid, &unknown_pointcloud_msg);
+      unknown_grid_pub_->publish(unknown_pointcloud_msg);
+    }
 
-    // if (publish_distance_grid_)
-    // {
-    //   sensor_msgs::msg::PointCloud2 dist_pointcloud_msg;
-    //   PopulateDistancePointCloudMsg(distance_grid, &dist_pointcloud_msg);
-    //   dist_grid_pub_->publish(dist_pointcloud_msg);
-    // }
+    if (publish_distance_grid_)
+    {
+      sensor_msgs::msg::PointCloud2 dist_pointcloud_msg;
+      PopulateDistancePointCloudMsg(distance_grid, &dist_pointcloud_msg);
+      dist_grid_pub_->publish(dist_pointcloud_msg);
+    }
 
-    // if (publish_cost_grid_)
-    // {
-    //   sensor_msgs::msg::PointCloud2 cost_pointcloud_msg;
-    //   PopulateCostPointCloudMsg(cost_grid, &cost_pointcloud_msg);
-    //   cost_grid_pub_->publish(cost_pointcloud_msg);
-    // }
+    if (publish_cost_grid_)
+    {
+      sensor_msgs::msg::PointCloud2 cost_pointcloud_msg;
+      PopulateCostPointCloudMsg(cost_grid, &cost_pointcloud_msg);
+      cost_grid_pub_->publish(cost_pointcloud_msg);
+    }
 
-    // if (publish_path_)
-    // {
-    //   double origin_xyz[3];
-    //   global_mapper_ptr_->GetOrigin(origin_xyz);
+    if (publish_path_)
+    {
+      double origin_xyz[3];
+      global_mapper_ptr_->GetOrigin(origin_xyz);
 
-    //   std::vector<std::array<double, 3>> dense_path, sparse_path;
-    //   global_mapper_ptr_->GetPaths(&dense_path, &sparse_path);
+      std::vector<std::array<double, 3>> dense_path, sparse_path;
+      global_mapper_ptr_->GetPaths(&dense_path, &sparse_path);
 
-    //   nav_msgs::msg::Path dense_path_msg, sparse_path_msg;
-    //   PopulatePathMsg(dense_path, &dense_path_msg);
-    //   PopulatePathMsg(sparse_path, &sparse_path_msg);
+      nav_msgs::msg::Path dense_path_msg, sparse_path_msg;
+      PopulatePathMsg(dense_path, &dense_path_msg);
+      PopulatePathMsg(sparse_path, &sparse_path_msg);
 
-    //   path_pub_->publish(dense_path_msg);
-    //   sparse_path_pub_->publish(sparse_path_msg);
-    // }
+      path_pub_->publish(dense_path_msg);
+      sparse_path_pub_->publish(sparse_path_msg);
+    }
 
     if (publish_dynamic_grid_)
     {
@@ -709,7 +662,7 @@ namespace global_mapper_ros
       sensor_msgs::msg::PointCloud2 static_pointcloud_msg;
       PopulateDynamicPointCloudMsg(occupancy_grid, temporal_grid, &dynamic_pointcloud_msg, &static_pointcloud_msg);
       dynamic_grid_pub_->publish(dynamic_pointcloud_msg);
-      // static_grid_pub_->publish(static_pointcloud_msg);
+      static_grid_pub_->publish(static_pointcloud_msg);
     }
 
     double duration = 1000 * (this->now().seconds() - prev_time);
@@ -763,7 +716,7 @@ namespace global_mapper_ros
       return;
     }
 
-    // 4) Build Eigen matrix, guard NaN/Inf, cast to float
+    // Build Eigen matrix, guard NaN/Inf, cast to float
     Eigen::Matrix4d mat_d = tf2::transformToEigen(tf_stamped).matrix();
     if (!mat_d.allFinite())
     {
@@ -822,7 +775,7 @@ namespace global_mapper_ros
       got_depth_image_ = true;
     }
 
-    // 2) Convert ROS2 PointCloud2 → PCL PointCloud<PointXYZI>
+    // 2) Convert ROS2 PointCloud2 -> PCL PointCloud<PointXYZI>
     pcl::PointCloud<pcl::PointXYZ> tmp;
     pcl::fromROSMsg(*cloud_msg, tmp);
     auto in = std::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
@@ -840,7 +793,7 @@ namespace global_mapper_ros
       in->points.push_back(pti);
     }
 
-    // 3) Look up cloud → map transform
+    // 3) Look up cloud -> map transform
     const std::string target_frame = params_.global_frame;
     geometry_msgs::msg::TransformStamped tf_stamped;
     try
