@@ -159,7 +159,7 @@ private:
     std::vector<EKFState> ekf_states_;  // Vector of EKF states for multiple objects
 
     // frame id
-    std::string frame_id_ = "map";
+    std::string frame_id_;
 
     // id 
     int marker_id_ = 0;

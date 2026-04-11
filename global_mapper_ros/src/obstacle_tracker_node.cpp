@@ -258,6 +258,7 @@ void ObstacleTrackerNode::declareAndsetParameters()
     this->declare_parameter("diag_R", 0.01); 
     this->declare_parameter("diag_Q", 0.01); 
     this->declare_parameter("association_tolerance", 1.0); 
+    this->declare_parameter("global_frame", "map"); 
 
     // Set parameters
     visual_level_ = this->get_parameter("visual_level").as_int();
@@ -286,6 +287,7 @@ void ObstacleTrackerNode::declareAndsetParameters()
     diag_R_ = this->get_parameter("diag_R").as_double(); 
     diag_Q_ = this->get_parameter("diag_Q").as_double(); 
     association_tolerance_ = this->get_parameter("association_tolerance").as_double();
+    frame_id_ = this->get_parameter("global_frame").as_string();
 
 
     // Print the parameters

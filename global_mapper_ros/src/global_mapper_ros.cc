@@ -317,11 +317,11 @@ namespace global_mapper_ros
       }*/
 
     /*  pcl::toROSMsg(cloud_frontier, *pointcloud_frontier);
-      pointcloud_frontier->header.frame_id = "map";
+      pointcloud_frontier->header.frame_id = params_.global_frame;
       pointcloud_frontier->header.stamp = tstampLastPclFused_;*/
 
     pcl::toROSMsg(cloud, *pointcloud);
-    pointcloud->header.frame_id = "map"; // use world_frame parameter instead
+    pointcloud->header.frame_id = params_.global_frame; // use world_frame parameter instead
     pointcloud->header.stamp = rclcpp::Clock().now();
     // pointcloud->header.stamp = tstampLastPclFused_;
   }
@@ -363,7 +363,7 @@ namespace global_mapper_ros
     // RCLCPP_INFO(this->get_logger(), "  [Occupancy] found %zu occupied cells", cloud.size());
 
     pcl::toROSMsg(cloud, *pointcloud);
-    pointcloud->header.frame_id = "map";
+    pointcloud->header.frame_id = params_.global_frame;
     pointcloud->header.stamp = rclcpp::Clock().now();
     // I (Jesus) changed the stamp so that it is the same as the last point cloud used in this map
     // pointcloud->header.stamp = tstampLastPclFused_;
@@ -428,7 +428,7 @@ namespace global_mapper_ros
     }
 
     pcl::toROSMsg(cloud, *pointcloud);
-    pointcloud->header.frame_id = "map";
+    pointcloud->header.frame_id = params_.global_frame;
     pointcloud->header.stamp = this->now();
   }
 
@@ -509,14 +509,14 @@ namespace global_mapper_ros
     }
 
     pcl::toROSMsg(cloud, *pointcloud);
-    pointcloud->header.frame_id = "map";
+    pointcloud->header.frame_id = params_.global_frame;
     pointcloud->header.stamp = this->now();
   }
 
   void GlobalMapperRos::PopulatePathMsg(const std::vector<std::array<double, 3>> &path, nav_msgs::msg::Path *path_msg)
   {
     path_msg->header.stamp = this->now();
-    path_msg->header.frame_id = "map";
+    path_msg->header.frame_id = params_.global_frame;
     for (const auto &point : path)
     {
       geometry_msgs::msg::PoseStamped pose;
@@ -588,11 +588,11 @@ namespace global_mapper_ros
 
     // Publish clouds 
     pcl::toROSMsg(dynamic_cloud, *dynamic_pointcloud);
-    dynamic_pointcloud->header.frame_id = "map";
+    dynamic_pointcloud->header.frame_id = params_.global_frame;
     dynamic_pointcloud->header.stamp = pc_stamp_;
 
     pcl::toROSMsg(static_cloud, *static_pointcloud);
-    static_pointcloud->header.frame_id = "map";
+    static_pointcloud->header.frame_id = params_.global_frame;
     static_pointcloud->header.stamp = pc_stamp_;
 }                                    
 
