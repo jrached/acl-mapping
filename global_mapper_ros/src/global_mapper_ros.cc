@@ -14,9 +14,6 @@ namespace global_mapper_ros
     tf_listener_ptr_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_ptr_);
     name_drone = this->get_namespace();
     name_drone.erase(std::remove(name_drone.begin(), name_drone.end(), '/'), name_drone.end()); // remove slashes
-    // lidar_frame_ = name_drone + "/" + name_drone + "_livox";
-    lidar_frame_ = name_drone + "/init_pose";
-    drone_frame_id_ = name_drone + "/base_link";
 
     // Instantiate cloud pointer to empty cloud message 
     const sensor_msgs::msg::PointCloud2::SharedPtr cloud_msg_ = std::make_shared<sensor_msgs::msg::PointCloud2>();
@@ -28,6 +25,8 @@ namespace global_mapper_ros
 
     // --- declare all parameters with sensible defaults:
     this->declare_parameter<std::string>("global_frame", "map");
+    this->declare_parameter<std::string>("lidar_frame", "odom");
+    this->declare_parameter<std::string>("drone_frame", "base_link");
     this->declare_parameter<std::vector<double>>("origin", {1.53, -3.17, 0.82});
     this->declare_parameter<std::vector<double>>("world_dimensions", {16.0, 16.0, 10.0});
     this->declare_parameter<double>("resolution", 0.4);
@@ -68,6 +67,8 @@ namespace global_mapper_ros
     this->declare_parameter<int>("temporal_grid.static_neighbor_thresh", 1);
 
     fla_utils::SafeGetParam(*this, "global_frame", params_.global_frame);
+    fla_utils::SafeGetParam(*this, "lidar_frame", lidar_frame_);
+    fla_utils::SafeGetParam(*this, "drone_frame", drone_frame_id_);
     fla_utils::SafeGetParam(*this, "origin", params_.origin);
     fla_utils::SafeGetParam(*this, "world_dimensions", params_.world_dimensions);
     fla_utils::SafeGetParam(*this, "resolution", params_.resolution);

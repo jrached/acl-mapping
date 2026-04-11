@@ -1,9 +1,9 @@
 flight_goggles:
   ros__parameters:
 
-    global_frame: map
-    lidar_frame: PX05/init_pose
-    drone_frame: PX05/base_link
+    global_frame: RR03/odom
+    lidar_frame: RR03/odom
+    drone_frame: RR03/base_link
     origin: [1.53, -3.17, 0.82]  # [m]
     world_dimensions: [16.0, 16.0, 10.0]  # [m]  16   16   4
     resolution: 0.3 # 0.3  # [m]  
@@ -24,7 +24,7 @@ flight_goggles:
       hit_inc: 0.6 #Was 0.4
       miss_inc: -0.3 #-0.1
       occupancy_threshold: 0.6  # [0.0, 1.0]
-      clear_unknown_distance: 5.0  # [m]  #Nan ¿and inf? --> Clear the unkown voxels up to this distance
+      clear_unknown_distance: 10.0 #5.0  # [m]  #Nan ¿and inf? --> Clear the unkown voxels up to this distance
 
     distance_grid:
       publish_distance_grid: false
