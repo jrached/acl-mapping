@@ -562,6 +562,13 @@ namespace global_mapper_ros
         float occupancy_value = global_mapper_ptr_->occupancy_grid_.ReadValue(ixyz);
         bool is_occupied = global_mapper_ptr_->occupancy_grid_.IsOccupied(occupancy_value); 
         bool is_dynamic = global_mapper_ptr_->temporal_grid_.IsDynamic(ixyz, is_occupied);
+
+        // Check bounds 
+        if (!global_mapper_ptr_->occupancy_grid_.IsInMap(ixyz)){
+          continue; 
+        }
+
+        // Populate point clouds
         if (is_occupied)
         {
           global_mapper_ptr_->occupancy_grid_.GridToWorld(ixyz, xyz);
@@ -727,9 +734,13 @@ namespace global_mapper_ros
     }
     Eigen::Matrix4f mat_f = mat_d.cast<float>();
 
+    // std::cout << "Pose local: " << pose_ptr->pose.position.x << ", " << pose_ptr->pose.position.y << ", " << pose_ptr->pose.position.z << std::endl; 
+
     // Transform pose to global frame 
     Eigen::Vector4f xyz_homo(pose_ptr->pose.position.x, pose_ptr->pose.position.y, pose_ptr->pose.position.z, 1.0f);
     Eigen::Vector4f xyz_global = mat_f * xyz_homo;
+
+    // std::cout << "Pose global: " << xyz_global[0] << ", " << xyz_global[1] << ", " << xyz_global[2] << std::endl; 
 
     // double xyz[3] = {pose_ptr->pose.position.x, pose_ptr->pose.position.y, pose_ptr->pose.position.z};
     double xyz[3] = {xyz_global[0], xyz_global[1], xyz_global[2]};
@@ -794,23 +805,62 @@ namespace global_mapper_ros
       in->points.push_back(pti);
     }
 
+    // 2.5) If using deskewed point cloud, first convert to lidar-origin frame 
+    const std::string lidar_origin_frame = "PX05/base_link";
+    const std::string deskewed_frame = cloud_msg->header.frame_id;
+    geometry_msgs::msg::TransformStamped lidar_tf;
+    try
+    {
+      lidar_tf = tf_buffer_ptr_->lookupTransform(
+          lidar_origin_frame,
+          deskewed_frame,
+          rclcpp::Time(0),
+          rclcpp::Duration(std::chrono::milliseconds(20)));
+    }
+    catch (const tf2::TransformException &ex)
+    {
+      RCLCPP_WARN(this->get_logger(),
+                  "[PointCloudCallback] lookupTransform failed: %s", ex.what());
+      return;
+    }
+
+    Eigen::Matrix4d mat_lidar_d = tf2::transformToEigen(lidar_tf).matrix();
+    if (!mat_lidar_d.allFinite())
+    {
+      RCLCPP_WARN(this->get_logger(),
+                  "Transform matrix contains NaN/Inf, skipping cloud");
+      return;
+    }
+    Eigen::Matrix4f mat_lidar_f = mat_lidar_d.cast<float>();
+
+    auto lidar_cloud = std::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
+    lidar_cloud->points.reserve(in->points.size());
+    for (const auto &pt : in->points)
+    {
+      Eigen::Vector4f v(pt.x, pt.y, pt.z, 1.0f);
+      Eigen::Vector4f vt = mat_lidar_f * v;
+      pcl::PointXYZI wpt;
+      wpt.x = vt.x();
+      wpt.y = vt.y();
+      wpt.z = vt.z();
+      wpt.intensity = pt.intensity;
+      lidar_cloud->points.push_back(wpt);
+    }
+    RCLCPP_DEBUG(this->get_logger(),
+                 "World cloud has %zu points", lidar_cloud->points.size());
+
     // 3) Look up cloud -> map transform
     const std::string target_frame = params_.global_frame;
+    // const std::string source_frame = cloud_msg->header.frame_id;
+    const std::string source_frame = lidar_origin_frame; 
     geometry_msgs::msg::TransformStamped tf_stamped;
     try
     {
       tf_stamped = tf_buffer_ptr_->lookupTransform(
           target_frame,
-          cloud_msg->header.frame_id,
+          source_frame,
           rclcpp::Time(0),
           rclcpp::Duration(std::chrono::milliseconds(20)));
-
-      // Eigen::Vector3d pos = tf_stamped.transform.translation; 
-      // auto quat = tf_stamped.transform.rotation;
-      // std::cout << "Cloud msg frame id: " << cloud_msg->header.frame_id << std::endl;
-
-      // std::cout << "transform position: (" << tf_stamped.transform.translation.x << ", " << tf_stamped.transform.translation.y << ", " << tf_stamped.transform.translation.z << ")" << std::endl;
-      // std::cout << "transform orientation: (" << tf_stamped.transform.rotation.x << ", " << tf_stamped.transform.rotation.y << ", " << tf_stamped.transform.rotation.z << ", " << tf_stamped.transform.rotation.w << ")" << std::endl; 
     }
     catch (const tf2::TransformException &ex)
     {
@@ -831,8 +881,10 @@ namespace global_mapper_ros
 
     // 5) Manually apply transform (avoid PCL’s FPE)
     auto world_cloud = std::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
-    world_cloud->points.reserve(in->points.size());
-    for (const auto &pt : in->points)
+    // world_cloud->points.reserve(in->points.size());
+    world_cloud->points.reserve(lidar_cloud->points.size());
+    // for (const auto &pt : in->points)
+    for (const auto &pt : lidar_cloud->points)
     {
       Eigen::Vector4f v(pt.x, pt.y, pt.z, 1.0f);
       Eigen::Vector4f vt = mat_f * v;

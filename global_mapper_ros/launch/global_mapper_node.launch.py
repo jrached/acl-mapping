@@ -16,7 +16,7 @@ def generate_launch_description():
     param_file_arg = DeclareLaunchArgument('param_file', default_value='flightgoggles.yaml', description='name of param file')
     use_tracker_arg = DeclareLaunchArgument('use_tracker', default_value='true', description='Whether to use obstacle tracker or not')
     pc_arg = DeclareLaunchArgument('depth_pointcloud_topic', default_value='mid360_PointCloud2',  description='input pointcloud topic')
-    pose_topic_arg = DeclareLaunchArgument('pose_topic',           default_value='mavros/local_position/pose',   description='input pose topic')
+    pose_topic_arg = DeclareLaunchArgument('pose_topic',           default_value='/dlio/odom_node/pose',   description='input pose topic')
     goal_topic_arg = DeclareLaunchArgument('goal_topic',           default_value='/move_base_simple/goal',       description='input goal topic')
     odom_topic_arg = DeclareLaunchArgument('odom_topic',           default_value='odometry/filtered_no',         description='input odometry topic')
     occ_grid_topic_arg = DeclareLaunchArgument('occupancy_grid_topic', default_value='occupancy_grid',              description='output occupancy grid topic')

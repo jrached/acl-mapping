@@ -62,6 +62,7 @@ namespace global_mapper
   {
     std::lock_guard<std::mutex> origin_lock(origin_mutex_);
     memcpy(origin_, xyz, sizeof(double) * 3);
+    // std::cout << "Origin: " << origin_[0] << ", " << origin_[1]  << ", " << origin_[2] << std::endl;  
   }
 
   void GlobalMapper::PushPointCloud(const PointCloud::ConstPtr &cloud_ptr, double timestamp)
@@ -203,6 +204,8 @@ namespace global_mapper
     }
   }
 
+
+
   void GlobalMapper::UpdateCostGrid()
   {
     cost_grid_.UpdateDijkstra(goal_);
@@ -287,7 +290,7 @@ namespace global_mapper
 
       std::unique_lock<std::mutex> output_lock(output_mutex_);
  
-      origin_mutex_.lock();
+      origin_mutex_.lock(); 
       occupancy_grid_.UpdateOrigin(origin_);
       // distance_grid_.UpdateOrigin(origin_);
       // cost_grid_.UpdateOrigin(origin_);

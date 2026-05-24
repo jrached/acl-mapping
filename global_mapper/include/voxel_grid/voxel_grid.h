@@ -500,6 +500,7 @@ template <typename T>
 std::vector<int> VoxelGrid<T>::UpdateOrigin(const double x, const double y, const double z)
 {
   double xyz[3] = { x, y, z };
+  // std::cout << "Update origin: " << x << ", " << y << ", " << z << std::endl;
   return UpdateOrigin(xyz);
 }
 
@@ -512,6 +513,8 @@ std::vector<int> VoxelGrid<T>::UpdateOrigin(const double new_grid_center[3])
   ComputeLowerLeftVoxels(new_grid_center, new_lower_left_voxels);
   ComputeShiftVoxels(new_lower_left_voxels, voxel_shift);
 
+  // std::cout << "Update origin: " << new_grid_center[0] << ", " << new_grid_center[1] << ", " << new_grid_center[2] << std::endl;
+
   if (voxel_shift[0] == 0 && voxel_shift[1] == 0 && voxel_shift[2] == 0)
   {
     return slice_inds;
@@ -521,6 +524,7 @@ std::vector<int> VoxelGrid<T>::UpdateOrigin(const double new_grid_center[3])
   PreShiftOrigin(slice_inds);
   ShiftOrigin(new_lower_left_voxels);
   PostShiftOrigin(slice_inds);
+  
   return slice_inds;
 }
 
