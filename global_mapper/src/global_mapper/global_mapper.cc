@@ -176,6 +176,9 @@ namespace global_mapper
 
   void GlobalMapper::UpdateOccupancyGrid()
   {
+    auto now = std::chrono::high_resolution_clock::now();
+    double prev_time = std::chrono::duration<double>(now.time_since_epoch()).count();
+
     PointCloud::ConstPtr cloud_ptr = PopPointCloud();
     InsertPointCloud(cloud_ptr);
 
@@ -202,6 +205,12 @@ namespace global_mapper
         }
       }
     }
+
+    now = std::chrono::high_resolution_clock::now();
+    double curr_time = std::chrono::duration<double>(now.time_since_epoch()).count();
+
+    double elapsed_time = (curr_time - prev_time) * 1e3;   
+    std::cout << "\nMap insertion duration: " << elapsed_time << " ms" << std::endl;
   }
 
 

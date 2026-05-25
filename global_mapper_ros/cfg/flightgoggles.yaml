@@ -2,13 +2,11 @@ flight_goggles:
   ros__parameters:
 
     global_frame: world_mocap #map
-    lidar_frame: PX05/init_pose
-    drone_frame: PX05/base_link
-    # drone_frame: PX05/init_pose
-    # origin: [1.53, -3.17, 0.82]  # [m]
+    odom_frame: PX05/init_pose
+    sensor_frame: PX05/base_link
     origin: [0.0, 0.0, 0.12]  # [m]
     world_dimensions: [16.0, 16.0, 5.0]  # [m]  16   16   10
-    resolution: 0.3 # 0.3  # [m]  
+    resolution: 0.2 # 0.3  # [m]  
     radius_drone: 0.41 # [m] THIS SHOULD BE HIGHER THAN THE RESOLUTION!!
     Ra: 11.3 # [m] radius of the first sphere (Sa) in the planner. The unknown pcloud published will only contain points inside this sphere
     z_ground: 0.1 #[m] points below z_ground are not published in the known grid
@@ -45,7 +43,7 @@ flight_goggles:
     temporal_grid:
       publish_dynamic_grid: true               
       occupied_thresh: 3.0                      # [s] How long a voxel needs to be occupied for it to be considered static 
-      unoccupied_thresh: 0.7 #1.0               # [s] How long a voxel needs to be unoccupied for it to be considered free space 
+      unoccupied_thresh: 1.0 #1.0               # [s] How long a voxel needs to be unoccupied for it to be considered free space 
       neighbor_radius: 1 #2                     # [-] For n = (1 + 2 * r) ^ 3 number of neighbors to explore, neighbor radius is r
       static_neighbor_thresh: 1 #6              # [-] Number of static neighbors for the current voxel to be considered static by association
 

@@ -97,8 +97,8 @@ private:
 
   // name of the drone
   std::string name_drone;
-  std::string lidar_frame_;
-  std::string drone_frame_id_;
+  std::string odom_frame_;
+  std::string sensor_frame_;
 
   // publishers
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr occ_grid_pub_;
