@@ -8,7 +8,7 @@ flight_goggles:
     # origin: [1.53, -3.17, 0.82]  # [m]
     origin: [0.0, 0.0, 0.12]  # [m]
     world_dimensions: [16.0, 16.0, 5.0]  # [m]  16   16   10
-    resolution: 0.2 # 0.3  # [m]  
+    resolution: 0.3 # 0.3  # [m]  
     radius_drone: 0.41 # [m] THIS SHOULD BE HIGHER THAN THE RESOLUTION!!
     Ra: 11.3 # [m] radius of the first sphere (Sa) in the planner. The unknown pcloud published will only contain points inside this sphere
     z_ground: 0.1 #[m] points below z_ground are not published in the known grid
@@ -23,7 +23,7 @@ flight_goggles:
       publish_occupancy_grid: true
       publish_unknown_grid: true
       init_value: 0.0
-      hit_inc: 0.6 #Was 0.4
+      hit_inc: 0.6 #0.4
       miss_inc: -0.3 #-0.1
       occupancy_threshold: 0.6  # [0.0, 1.0]
       clear_unknown_distance: 5.0  # [m]  #Nan ¿and inf? --> Clear the unkown voxels up to this distance
@@ -45,7 +45,7 @@ flight_goggles:
     temporal_grid:
       publish_dynamic_grid: true               
       occupied_thresh: 3.0                      # [s] How long a voxel needs to be occupied for it to be considered static 
-      unoccupied_thresh: 0.5 #1.0               # [s] How long a voxel needs to be unoccupied for it to be considered free space 
+      unoccupied_thresh: 0.7 #1.0               # [s] How long a voxel needs to be unoccupied for it to be considered free space 
       neighbor_radius: 1 #2                     # [-] For n = (1 + 2 * r) ^ 3 number of neighbors to explore, neighbor radius is r
       static_neighbor_thresh: 1 #6              # [-] Number of static neighbors for the current voxel to be considered static by association
 
@@ -72,6 +72,6 @@ flight_goggles:
     use_gridnet: true
     alpha: 0.05 
     gridnet_tolerance: 0.5 # 0.3                # [m] Gridnet association tolerance. Higher tolerance --> higher recall, lower precision
-    time_to_hide_obstacle: 0.3                  # [s] Number of seconds after which to hide a KF estimate without yet deleting it
+    time_to_hide_obstacle: 0.3 #0.3             # [s] Number of seconds after which to hide a KF estimate without yet deleting it
     diag_R: 0.01                                # [-] Diagonal values of KF measurement noise covariance matrix. 0.01 works well for hardware 
     diag_Q: 0.01                                # [-] Diagonal values of KF process noise covariance matrix. 0.01 works well for hardware 

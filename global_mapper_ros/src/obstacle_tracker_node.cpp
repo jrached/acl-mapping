@@ -1,11 +1,13 @@
 #include <obstacle_tracker/obstacle_tracker_node.h>
 #include <limits>
 
+using namespace std::chrono_literals;
+
 int STATE_SIZE = 9;
 int MEASUREMENT_SIZE = 3;   
 
 // Adaptive EKF Prediction Step for 3D
-void ekf_predict(EKFState &ekf_state, double dt)
+void ekf_predict(EKFState &ekf_state, double dt, double time_propagated)
 {
     double x = ekf_state.x[0], y = ekf_state.x[1], z = ekf_state.x[2], theta = ekf_state.x[3], phi = ekf_state.x[4], v = ekf_state.x[5], a = ekf_state.x[6], theta_dot = ekf_state.x[7], phi_dot = ekf_state.x[8];
     Eigen::MatrixXd F = Eigen::MatrixXd::Identity(STATE_SIZE, STATE_SIZE);
@@ -37,6 +39,9 @@ void ekf_predict(EKFState &ekf_state, double dt)
 
     // Predict covariance
     ekf_state.P = F * ekf_state.P.selfadjointView<Eigen::Lower>() * F.transpose() + ekf_state.Q * dt;
+    
+    // Update last time the estimate was propagated 
+    ekf_state.time_propagated = time_propagated;
 }
 
 // Adaptive EKF Update Step for 3D
@@ -180,6 +185,7 @@ dynus_interfaces::msg::PWPTraj convertPwp2PwpMsg(const PieceWisePol &pwp)
 ObstacleTrackerNode::ObstacleTrackerNode() : Node("obstacle_tracker_node")
 {
     // Initialize flags 
+    new_pc_ = false; 
     new_gridnet_ = false; 
     gn_counter_ = 0; 
 
@@ -224,6 +230,9 @@ ObstacleTrackerNode::ObstacleTrackerNode() : Node("obstacle_tracker_node")
     // Initialize the tf2 buffer and listener
     tf2_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
     tf2_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf2_buffer_);
+
+    // Timer to run tracker at 100 Hz 
+    timer_ = this->create_wall_timer(10ms, std::bind(&ObstacleTrackerNode::runTracker, this));
 
     RCLCPP_INFO(this->get_logger(), "Obstacle Tracker Node Initialized");
 }
@@ -322,7 +331,12 @@ void ObstacleTrackerNode::gridnetCallback(const geometry_msgs::msg::PoseArray::S
 void ObstacleTrackerNode::pointcloudCallback(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
 {
     pc_timestamp_ = msg->header.stamp;
+    pc_msg_ = msg; 
+    new_pc_ = true; 
+}
 
+void ObstacleTrackerNode::runTracker()
+{
     start_time_ = this->now().seconds();
 
     std::vector<Cluster> clusters;
@@ -333,129 +347,133 @@ void ObstacleTrackerNode::pointcloudCallback(const sensor_msgs::msg::PointCloud2
     // Mark all EKFs as unnasigned  
     resetEKFassignments(); 
 
-    // Convert PointCloud2 to PCL format
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::fromROSMsg(*msg, *cloud);
-
-    // Remove NaN values from the cloud
-    std::vector<int> indices;
-    pcl::removeNaNFromPointCloud(*cloud, *cloud, indices);
-
-    // Check if the cloud is empty
-    if (cloud->empty())
+    if (new_pc_)
     {
-        RCLCPP_WARN(this->get_logger(), "Received empty point cloud!");
-        return;
-    }
+        // Convert PointCloud2 to PCL format
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+        pcl::fromROSMsg(*pc_msg_, *cloud);
 
-    // For hardware, we need to remove slash
-    std::string targ_frame_id = msg->header.frame_id; 
-    if (use_hardware_ && !targ_frame_id.empty() && targ_frame_id[0] == '/')
-        targ_frame_id.erase(0, 1);
+        // Remove NaN values from the cloud
+        std::vector<int> indices;
+        pcl::removeNaNFromPointCloud(*cloud, *cloud, indices);
 
-    // Transform the cloud to the map frame
-    geometry_msgs::msg::TransformStamped transform_stamped;
-    try
-    {
-        transform_stamped = tf2_buffer_->lookupTransform(frame_id_,
-                                                        targ_frame_id,
-                                                        msg->header.stamp,
-                                                        rclcpp::Duration::from_seconds(10.0));
-    }
-    catch (tf2::TransformException &ex)
-    {
-        RCLCPP_WARN(this->get_logger(), "Transform error: %s", ex.what());
-        return;
-    }
-
-    // Transform the point cloud to the map frame
-    Eigen::Affine3d w_T_b = tf2::transformToEigen(transform_stamped);
-    pcl::transformPointCloud(*cloud, *cloud, w_T_b);
-
-    // Set is_dense to true so kdtree search won't fail 
-    cloud->is_dense = true; 
-    
-    // Euclidean Cluster Extraction
-    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
-    tree->setInputCloud(cloud);
-
-    std::vector<pcl::PointIndices> cluster_indices;
-    pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-    ec.setClusterTolerance(cluster_tolerance_); // Cluster tolerance (distance)
-    ec.setMinClusterSize(min_cluster_size_);    // Minimum number of points per cluster
-    ec.setMaxClusterSize(max_cluster_size_);    // Maximum number of points per cluster
-    ec.setSearchMethod(tree);
-    ec.setInputCloud(cloud);
-    ec.extract(cluster_indices);
-
-    // Visualize the clustered point cloud
-    std::vector<Eigen::Vector3d> cluster_centroids;
-    std::vector<Eigen::Vector3d> cluster_bboxes;
-    getCentroidsAndSizesOfClusters(cloud, cluster_indices, cluster_centroids, cluster_bboxes);
-
-    for (size_t i = 0; i < cluster_indices.size(); ++i)
-    {
-        auto &indices = cluster_indices[i];
-
-        // Get the cluster's centroid as the measurement
-        Eigen::Vector3d centroid = cluster_centroids[i];
-
-        // Get the cluster's bounding box size
-        Eigen::Vector3d bbox = cluster_bboxes[i];
-
-        // Check bbox size -> if too large, ignore the cluster (probably a static object)        
-        if (bbox.norm() > cluster_bbox_cutoff_size_)
+        // Check if the cloud is empty
+        if (cloud->empty())
         {
-            continue;
+            RCLCPP_WARN(this->get_logger(), "Received empty point cloud!");
+            return;
         }
 
-        // If shortest bounding box side length is too short, probably a spurious thin surface.
-        if (bbox.minCoeff() < cluster_bbox_cutoff_len_) {
-            continue; 
-        }
+        // For hardware, we need to remove slash
+        std::string targ_frame_id = pc_msg_->header.frame_id; 
+        if (use_hardware_ && !targ_frame_id.empty() && targ_frame_id[0] == '/')
+            targ_frame_id.erase(0, 1);
 
-        // Filter by density
-        if (indices.indices.size() / (bbox.norm()) < bbox_density_) {
-            continue;
-        }
-
-        // Filter by ratio between two smallest bbox side-lengths (flat surface filter)
-        Eigen::Vector3d sorted_bbox = bbox; 
-        std::sort(sorted_bbox.data(), sorted_bbox.data() + 3);
-        double smallest = sorted_bbox(0);
-        double second_smallest = sorted_bbox(1);
-        if (second_smallest / smallest > bbox_ratio_) {
-            continue;
-        }
-
-        // Find the closest EKF state (data association)
-        int closest_ekf_idx = associate_cluster_with_ekf(centroid, ekf_states_, association_tolerance_);
-
-        // Initialize a new cluster
-        Cluster cluster;
-
-        if (closest_ekf_idx >= 0)
+        // Transform the cloud to the map frame
+        geometry_msgs::msg::TransformStamped transform_stamped;
+        try
         {
-            // Update the existing EKF state
-            ekf_predict(ekf_states_[closest_ekf_idx], this->now().seconds() - ekf_states_[closest_ekf_idx].time_updated);                                  // EKF Prediction step
-            aekf_update(ekf_states_[closest_ekf_idx], centroid, adaptive_kf_alpha_, this->now().seconds(), this->now().seconds(), bbox, use_adaptive_kf_); // EKF Update step
-            cluster.setEKFStateAndCentroid(ekf_states_[closest_ekf_idx], centroid);
+            transform_stamped = tf2_buffer_->lookupTransform(frame_id_,
+                                                            targ_frame_id,
+                                                            pc_msg_->header.stamp,
+                                                            rclcpp::Duration::from_seconds(10.0));
         }
-        else
+        catch (tf2::TransformException &ex)
         {
-            // No match found, add a new EKF state
-            Eigen::MatrixXd Q_avg, R_avg;
-            calculateAverageQandR(Q_avg, R_avg);
-            EKFState new_state(STATE_SIZE, Q_avg, R_avg, this->now().seconds(), this->now().seconds(), bbox, ekf_state_id_++, alpha_, diag_R_, diag_Q_);
-            new_state.x.head(3) = centroid; // Initialize state with the centroid
-            ekf_states_.push_back(new_state);
-            cluster.setEKFStateAndCentroid(new_state, centroid);
+            RCLCPP_WARN(this->get_logger(), "Transform error: %s", ex.what());
+            return;
         }
 
-        // Add the cluster to the vector
-        clusters.push_back(cluster);
+        // Transform the point cloud to the map frame
+        Eigen::Affine3d w_T_b = tf2::transformToEigen(transform_stamped);
+        pcl::transformPointCloud(*cloud, *cloud, w_T_b);
+
+        // Set is_dense to true so kdtree search won't fail 
+        cloud->is_dense = true; 
+        
+        // Euclidean Cluster Extraction
+        pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
+        tree->setInputCloud(cloud);
+
+        std::vector<pcl::PointIndices> cluster_indices;
+        pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
+        ec.setClusterTolerance(cluster_tolerance_); // Cluster tolerance (distance)
+        ec.setMinClusterSize(min_cluster_size_);    // Minimum number of points per cluster
+        ec.setMaxClusterSize(max_cluster_size_);    // Maximum number of points per cluster
+        ec.setSearchMethod(tree);
+        ec.setInputCloud(cloud);
+        ec.extract(cluster_indices);
+
+        // Visualize the clustered point cloud
+        std::vector<Eigen::Vector3d> cluster_centroids;
+        std::vector<Eigen::Vector3d> cluster_bboxes;
+        getCentroidsAndSizesOfClusters(cloud, cluster_indices, cluster_centroids, cluster_bboxes);
+
+        for (size_t i = 0; i < cluster_indices.size(); ++i)
+        {
+            auto &indices = cluster_indices[i];
+
+            // Get the cluster's centroid as the measurement
+            Eigen::Vector3d centroid = cluster_centroids[i];
+
+            // Get the cluster's bounding box size
+            Eigen::Vector3d bbox = cluster_bboxes[i];
+
+            // Check bbox size -> if too large, ignore the cluster (probably a static object)        
+            if (bbox.norm() > cluster_bbox_cutoff_size_)
+            {
+                continue;
+            }
+
+            // If shortest bounding box side length is too short, probably a spurious thin surface.
+            if (bbox.minCoeff() < cluster_bbox_cutoff_len_) {
+                continue; 
+            }
+
+            // Filter by density
+            if (indices.indices.size() / (bbox.norm()) < bbox_density_) {
+                continue;
+            }
+
+            // Filter by ratio between two smallest bbox side-lengths (flat surface filter)
+            Eigen::Vector3d sorted_bbox = bbox; 
+            std::sort(sorted_bbox.data(), sorted_bbox.data() + 3);
+            double smallest = sorted_bbox(0);
+            double second_smallest = sorted_bbox(1);
+            if (second_smallest / smallest > bbox_ratio_) {
+                continue;
+            }
+
+            // Find the closest EKF state (data association)
+            int closest_ekf_idx = associate_cluster_with_ekf(centroid, ekf_states_, association_tolerance_);
+
+            // Initialize a new cluster
+            Cluster cluster;
+
+            if (closest_ekf_idx >= 0)
+            {
+                // Update the existing EKF state
+                ekf_predict(ekf_states_[closest_ekf_idx], this->now().seconds() - ekf_states_[closest_ekf_idx].time_propagated, this->now().seconds());                                  // EKF Prediction step
+                aekf_update(ekf_states_[closest_ekf_idx], centroid, adaptive_kf_alpha_, this->now().seconds(), this->now().seconds(), bbox, use_adaptive_kf_); // EKF Update step
+                cluster.setEKFStateAndCentroid(ekf_states_[closest_ekf_idx], centroid);
+            }
+            else
+            {
+                // No match found, add a new EKF state
+                Eigen::MatrixXd Q_avg, R_avg;
+                calculateAverageQandR(Q_avg, R_avg);
+                EKFState new_state(STATE_SIZE, Q_avg, R_avg, this->now().seconds(), this->now().seconds(), this->now().seconds(), bbox, ekf_state_id_++, alpha_, diag_R_, diag_Q_);
+                new_state.x.head(3) = centroid; // Initialize state with the centroid
+                ekf_states_.push_back(new_state);
+                cluster.setEKFStateAndCentroid(new_state, centroid);
+            }
+
+            // Add the cluster to the vector
+            clusters.push_back(cluster);
+        }
+
+        new_pc_ = false; 
     }
-    
 
     // Check whether EKFs that weren't assigned a MOS measurement can be recoverd through point cloud features
     if (use_gridnet_ && new_gridnet_) 
@@ -477,13 +495,31 @@ void ObstacleTrackerNode::pointcloudCallback(const sensor_msgs::msg::PointCloud2
 
                 // Update EKFs states that didn't find a cluster assignment 
                 gridnet_pos[2] = ekf_states_[closest_ekf_idx].x[2];
-                ekf_predict(ekf_states_[closest_ekf_idx], this->now().seconds() - ekf_states_[closest_ekf_idx].time_updated); // EKF Prediction step
+                ekf_predict(ekf_states_[closest_ekf_idx], this->now().seconds() - ekf_states_[closest_ekf_idx].time_propagated, this->now().seconds()); // EKF Prediction step
                 aekf_update(ekf_states_[closest_ekf_idx], gridnet_pos, adaptive_kf_alpha_, this->now().seconds(), ekf_states_[closest_ekf_idx].last_mes_time, ekf_states_[closest_ekf_idx].avg_bbox, use_adaptive_kf_); // EKF Update step
                 cluster.setEKFStateAndCentroid(ekf_states_[closest_ekf_idx], gridnet_pos);
 
                 // Add the cluster to the vector
                 clusters.push_back(cluster);
             }
+        }
+
+        new_gridnet_ = false; 
+    }
+
+    // Propagate unassigned EKF estimates 
+    for (size_t i = 0; i < ekf_states_.size(); ++i) 
+    {
+        EKFState& current_estimate = ekf_states_[i];
+        if (current_estimate.assigned == false) 
+        {   
+            Cluster cluster; 
+            ekf_predict(current_estimate, this->now().seconds() - current_estimate.time_propagated, this->now().seconds()); 
+            Eigen::Vector3d est_pos(current_estimate.x[0], current_estimate.x[1], current_estimate.x[2]);
+            cluster.setEKFStateAndCentroid(current_estimate, est_pos);
+
+            // Append to estimate vector
+            clusters.push_back(cluster);
         }
     }
 
@@ -496,11 +532,6 @@ void ObstacleTrackerNode::pointcloudCallback(const sensor_msgs::msg::PointCloud2
     // Remove static obstacles based on low velocity
     // filterStaticObstacles();
 
-}
-
-void ObstacleTrackerNode::trackObstacles()
-{
-    
 }
 
 // Function to delete old EKF states that have not been updated for a long time
@@ -588,6 +619,11 @@ void ObstacleTrackerNode::publishBoxes(const std::vector<Cluster> &clusters)
         current_velocity = Eigen::Vector3d(v * cos(phi) * cos(theta), v * cos(phi) * sin(theta), v * sin(phi));
         acceleration = Eigen::Vector3d(a * cos(phi) * cos(theta), a * cos(phi) * sin(theta), a * sin(phi));
 
+        if (current_velocity.norm() <= velocity_threshold_ || (start_time_ - cluster.ekf_state.time_updated) >= time_to_hide_obstacle_)
+        {
+            continue;
+        }
+    
         const double cx = x;
         const double cy = y;
         const double cz = z;
@@ -638,10 +674,7 @@ void ObstacleTrackerNode::publishBoxes(const std::vector<Cluster> &clusters)
 
 
         // Add the bounding box marker to the marker array
-        if (current_velocity.norm() > velocity_threshold_ && (start_time_ - cluster.ekf_state.time_updated) < time_to_hide_obstacle_)
-        {
-            cluster_markers.markers.push_back(marker);
-        }
+        cluster_markers.markers.push_back(marker);
 
         // Create a SPHERE marker to visualize the uncertainty
         visualization_msgs::msg::Marker unc_sphere_marker;
@@ -669,10 +702,7 @@ void ObstacleTrackerNode::publishBoxes(const std::vector<Cluster> &clusters)
         unc_sphere_marker.color.a = 0.6;
 
         // Add the uncertainty sphere marker to the marker array
-        if (current_velocity.norm() > velocity_threshold_ && (start_time_ - cluster.ekf_state.time_updated) < time_to_hide_obstacle_)
-        {
-            unc_sphere_markers.markers.push_back(unc_sphere_marker);
-        }
+        unc_sphere_markers.markers.push_back(unc_sphere_marker);
     }
 
     // Step 3: Publish the marker array to visualize clusters
@@ -718,8 +748,8 @@ void ObstacleTrackerNode::publishPredictions(const std::vector<Cluster> &cluster
         y_values.push_back(current_position[1]);
         z_values.push_back(current_position[2]);
 
-        // Ignore low velocities (noise) 
-        if (initial_velocity.norm() <= velocity_threshold_)
+        // Ignore low velocities (noise) and stale estimates
+        if (initial_velocity.norm() <= velocity_threshold_ || (start_time_ - clusters[i].ekf_state.time_updated) >= time_to_hide_obstacle_)
         {
             continue; 
         }

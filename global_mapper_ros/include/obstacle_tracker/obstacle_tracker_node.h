@@ -36,6 +36,7 @@ struct EKFState {
     Eigen::MatrixXd R;  // measurement noise covariance matrix
 
     // For visualization
+    double time_propagated = 0.0;
     double time_updated = 0.0;
     double last_mes_time = 0.0;
     Eigen::Vector3d bbox;
@@ -48,13 +49,14 @@ struct EKFState {
     float diag_Q;
 
     EKFState() {} // Constructor for Cluster struct
-    EKFState(int state_size, Eigen::MatrixXd Q, Eigen::MatrixXd R, double time_updated, double last_mes_time, Eigen::Vector3d bbox, int id, float alpha, float diag_R, float diag_Q) {
+    EKFState(int state_size, Eigen::MatrixXd Q, Eigen::MatrixXd R, double time_propagated, double time_updated, double last_mes_time, Eigen::Vector3d bbox, int id, float alpha, float diag_R, float diag_Q) {
         x = Eigen::VectorXd::Zero(state_size);
         P = Eigen::MatrixXd::Identity(state_size, state_size);
         this->Q = Q;
         this->R = R;
         this->diag_R = diag_R;
         this->diag_Q = diag_Q;
+        this->time_propagated = time_propagated;
         this->time_updated = time_updated;
         this->last_mes_time = last_mes_time;
         this->bbox = bbox;
@@ -109,6 +111,7 @@ private:
     sensor_msgs::msg::PointCloud2::SharedPtr pc_msg_;
 
     // New message flags
+    bool new_pc_;
     bool new_gridnet_;
     int gn_counter_; 
 
@@ -185,7 +188,7 @@ private:
     Eigen::VectorXd polyfit(const std::vector<double>& t, const std::vector<double>& y, int degree);
     double calculateVariance(const std::vector<double>& t, const std::vector<double>& y, const Eigen::VectorXd& beta, int degree);
     void filterStaticObstacles();
-    void trackObstacles();
+    void runTracker();
 
     // GridNet functions 
     void resetEKFassignments();
