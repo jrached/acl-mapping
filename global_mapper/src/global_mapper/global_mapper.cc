@@ -62,7 +62,6 @@ namespace global_mapper
   {
     std::lock_guard<std::mutex> origin_lock(origin_mutex_);
     memcpy(origin_, xyz, sizeof(double) * 3);
-    // std::cout << "Origin: " << origin_[0] << ", " << origin_[1]  << ", " << origin_[2] << std::endl;  
   }
 
   void GlobalMapper::PushPointCloud(const PointCloud::ConstPtr &cloud_ptr, double timestamp)
@@ -182,11 +181,12 @@ namespace global_mapper
     PointCloud::ConstPtr cloud_ptr = PopPointCloud();
     InsertPointCloud(cloud_ptr);
 
+    // // Define clear radius
     // printf("RadiusDrone=%f\n", params_.radius_drone);
-    // int n = (params_.radius_drone) / (params_.resolution);  // Number of voxels to clear in each side
+    // int n = (params_.radius_drone) / (params_.resolution);  // Number of voxels to clear in each side. TODO: should be ceil of this
     // n = (n > 1) ? n : 1;                                    // force n to be at least 1
-
     int n = 1;
+
     // clear voxels around vehicle
     int origin_ixyz[3];
     occupancy_grid_.WorldToGrid(origin_, origin_ixyz);
@@ -196,7 +196,6 @@ namespace global_mapper
       {
         for (int k = -n; k <= n; k++)
         {
-          // printf("Clearing cell around vehicle!");
           int ixyz[3];
           ixyz[0] = origin_ixyz[0] + i;
           ixyz[1] = origin_ixyz[1] + j;
@@ -212,8 +211,6 @@ namespace global_mapper
     double elapsed_time = (curr_time - prev_time) * 1e3;   
     std::cout << "\nMap insertion duration: " << elapsed_time << " ms" << std::endl;
   }
-
-
 
   void GlobalMapper::UpdateCostGrid()
   {
@@ -290,7 +287,7 @@ namespace global_mapper
   void GlobalMapper::Spin()
   {
     static int spincount = 0;
-    while (true) // TODO switch back to loop 
+    while (true) 
     {
       std::unique_lock<std::mutex> data_lock(data_mutex_);
       condition_.wait(data_lock, [this]
@@ -308,7 +305,7 @@ namespace global_mapper
       occupancy_grid_.ResetDiffs();
       UpdateOccupancyGrid();
       temporal_grid_.UpdateOrigin(origin_);
-      UpdateTemporalGrid(timestamp_); // TODO: get timestamp from ROS node
+      UpdateTemporalGrid(timestamp_); 
       // UpdateDistanceGrid();
       // if ((spincount++ % 15) == 0)
       //{
@@ -320,9 +317,7 @@ namespace global_mapper
 
   void GlobalMapper::Run()
   {
-    // fprintf(stderr, "GlobalMapper::Run\n");
     thread_ = std::thread(&GlobalMapper::Spin, this);
-    // this->Spin();
   }
 
 } // namespace global_mapper
