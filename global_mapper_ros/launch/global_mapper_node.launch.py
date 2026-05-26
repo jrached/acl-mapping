@@ -16,7 +16,7 @@ def generate_launch_description():
     param_file_arg = DeclareLaunchArgument('param_file', default_value='flightgoggles.yaml', description='name of param file')
     use_tracker_arg = DeclareLaunchArgument('use_tracker', default_value='true', description='Whether to use obstacle tracker or not')
     pc_arg = DeclareLaunchArgument('depth_pointcloud_topic', default_value='mid360_PointCloud2',  description='input pointcloud topic')
-    pose_topic_arg = DeclareLaunchArgument('pose_topic',           default_value='/dlio/odom_node/pose',   description='input pose topic')
+    pose_topic_arg = DeclareLaunchArgument('pose_topic',           default_value='dlio/odom_node/pose',   description='input pose topic')
     goal_topic_arg = DeclareLaunchArgument('goal_topic',           default_value='/move_base_simple/goal',       description='input goal topic')
     odom_topic_arg = DeclareLaunchArgument('odom_topic',           default_value='odometry/filtered_no',         description='input odometry topic')
     occ_grid_topic_arg = DeclareLaunchArgument('occupancy_grid_topic', default_value='occupancy_grid',              description='output occupancy grid topic')
@@ -27,6 +27,12 @@ def generate_launch_description():
     path_topic_arg = DeclareLaunchArgument('path_topic',           default_value='path',                        description='output path topic')
     dyn_grid_topic_arg = DeclareLaunchArgument('dynamic_grid_topic',           default_value='dynamic_grid',                        description='output dynamic grid topic')
     sparse_path_topic_arg = DeclareLaunchArgument('sparse_path_topic',    default_value='sparse_path',                 description='output sparse path topic')
+    init_x_arg = DeclareLaunchArgument('init_x',    default_value='0.0',                 description='vehicle initial pose')
+    init_y_arg = DeclareLaunchArgument('init_y',    default_value='0.0',                 description='vehicle initial pose')
+    init_z_arg = DeclareLaunchArgument('init_z',    default_value='0.0',                 description='vehicle initial pose')
+    init_yaw_arg = DeclareLaunchArgument('init_yaw',    default_value='0.0',                 description='vehicle initial pose')
+    init_pitch_arg = DeclareLaunchArgument('init_pitch',    default_value='0.0',                 description='vehicle initial pose')
+    init_roll_arg = DeclareLaunchArgument('init_roll',    default_value='0.0',                 description='vehicle initial pose')
 
 
     # Opaque function to launch nodes
@@ -48,6 +54,12 @@ def generate_launch_description():
         path_topic             = LaunchConfiguration('path_topic').perform(context)
         dynamic_grid_topic     = LaunchConfiguration('dynamic_grid_topic').perform(context)
         sparse_path_topic      = LaunchConfiguration('sparse_path_topic').perform(context)
+        init_x                 = LaunchConfiguration('init_x').perform(context)
+        init_y                 = LaunchConfiguration('init_y').perform(context)
+        init_z                 = LaunchConfiguration('init_z').perform(context)
+        init_yaw               = LaunchConfiguration('init_yaw').perform(context)
+        init_pitch             = LaunchConfiguration('init_pitch').perform(context)
+        init_roll              = LaunchConfiguration('init_roll').perform(context)
 
         # The path to the parameter file
         parameters_path=os.path.join(get_package_share_directory('global_mapper_ros'), 'cfg', param_file)
@@ -97,7 +109,17 @@ def generate_launch_description():
             remappings=[('point_cloud', f'dynamic_grid')],
         )
 
-        nodes_to_start = [global_mapper_node]
+        init_pose_tf = Node( 
+            package='tf2_ros', 
+            executable='static_transform_publisher', 
+            name='init_pose_to_world_mocap',
+            arguments=[init_x, init_y, init_z, init_yaw, init_pitch, init_roll, "world_mocap", f"{namespace}/init_pose"]
+        )
+
+        nodes_to_start = [
+                        init_pose_tf,
+                        global_mapper_node
+                        ]
         if use_tracker: 
             nodes_to_start.append(obstacle_tracker_node)
 
@@ -120,5 +142,11 @@ def generate_launch_description():
         path_topic_arg,
         dyn_grid_topic_arg, 
         sparse_path_topic_arg,
+        init_x_arg,
+        init_y_arg,
+        init_z_arg,
+        init_yaw_arg,
+        init_pitch_arg,
+        init_roll_arg,
         OpaqueFunction(function=launch_setup)
     ])

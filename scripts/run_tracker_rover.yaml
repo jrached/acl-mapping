@@ -8,10 +8,10 @@ windows:
       # Mapping & Tracking
       - shell_command: 
         - source ~/code/decomp_ws/install/setup.bash 
-        - ros2 launch global_mapper_ros global_mapper_node.launch.py namespace:=$ROVER_NAME depth_pointcloud_topic:=livox/lidar_ds use_tracker:=true pose_topic:=dlio/odom_node/pose param_file:=rover.yaml
+        - ros2 launch global_mapper_ros global_mapper_node.launch.py namespace:=$VEH_NAME depth_pointcloud_topic:=livox/lidar_ds use_tracker:=true init_x:=0.022918 init_y:=0.004601 init_z:=0.127709 init_yaw:=-0.0062990 init_pitch:=0.026865 init_roll:=0.002606 pose_topic:=dlio/odom_node/pose param_file:=rover.yaml
       # Downsampling
       - shell_command: 
-        - ros2 launch pc_preprocess preprocess.launch.py quad:=$ROVER_NAME depth_pointcloud_topic:=livox/lidar_ds
+        - ros2 launch pc_preprocess preprocess.launch.py namespace:=$VEH_NAME in_cloud_topic:=dlio/odom_node/pointcloud/deskewed out_cloud_topic:=livox/lidar_ds
       # Livox 
       - shell_command:
         - source /home/swarm/code/livox_ws/install/setup.bash

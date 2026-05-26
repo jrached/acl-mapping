@@ -326,7 +326,6 @@ bool VoxelGrid<T>::IsInMap(const int ixyz[3]) const
 {
   for (int i = 0; i < 3; i++)
   {
-    // printf("ixyz[%i] = %i\n", i, ixyz[i]);
     if (ixyz[i] < 0 || ixyz[i] >= grid_dimensions_[i])
     {
       return false;
@@ -500,7 +499,6 @@ template <typename T>
 std::vector<int> VoxelGrid<T>::UpdateOrigin(const double x, const double y, const double z)
 {
   double xyz[3] = { x, y, z };
-  // std::cout << "Update origin: " << x << ", " << y << ", " << z << std::endl;
   return UpdateOrigin(xyz);
 }
 
@@ -512,8 +510,6 @@ std::vector<int> VoxelGrid<T>::UpdateOrigin(const double new_grid_center[3])
   std::vector<int> slice_inds;
   ComputeLowerLeftVoxels(new_grid_center, new_lower_left_voxels);
   ComputeShiftVoxels(new_lower_left_voxels, voxel_shift);
-
-  // std::cout << "Update origin: " << new_grid_center[0] << ", " << new_grid_center[1] << ", " << new_grid_center[2] << std::endl;
 
   if (voxel_shift[0] == 0 && voxel_shift[1] == 0 && voxel_shift[2] == 0)
   {

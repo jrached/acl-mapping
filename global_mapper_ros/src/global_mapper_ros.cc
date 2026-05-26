@@ -303,7 +303,7 @@ namespace global_mapper_ros
             occupancy_grid.GridToWorld(ixyz, xyz);
             if (xyz[2] > params_.z_ground) // only publish points above the ground
             {
-              cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); // replace with emplace_back (slightly more optimized according to chat)
+              cloud.push_back(pcl::PointXYZ(xyz[0], xyz[1], xyz[2])); 
             }
           }
         }
@@ -338,7 +338,6 @@ namespace global_mapper_ros
     {
       RCLCPP_WARN(this->get_logger(), "[world_database_master_ros] OnGetTransform failed with %s", ex.what());
 
-      // chat thinks this could be problematic when other functions are called like worldtogrid
       transform(0) = std::numeric_limits<double>::quiet_NaN();
       transform(1) = std::numeric_limits<double>::quiet_NaN();
       transform(2) = std::numeric_limits<double>::quiet_NaN();
@@ -352,7 +351,6 @@ namespace global_mapper_ros
     distance_grid.WorldToGrid(xyz, slice_ixyz);
 
     pcl::PointCloud<pcl::PointXYZRGBA> cloud;
-    // chat mentioned preallocated point cloud for better performance with large grids
     static double max_dist = params_.truncation_distance * params_.truncation_distance;
     for (int x = 0; x < grid_dimensions[0]; x++)
     {
@@ -360,7 +358,7 @@ namespace global_mapper_ros
       {
         int ixyz[3] = {x, y, slice_ixyz[2]};
         distance_grid.GridToWorld(ixyz, xyz);
-        int cost = distance_grid.ReadValue(xyz); // chat claims this is used incorrctly and should instead be ReadValue(ixyz)
+        int cost = distance_grid.ReadValue(xyz); 
         pcl::PointXYZRGBA point;
         point.x = xyz[0];
         point.y = xyz[1];
@@ -521,12 +519,12 @@ namespace global_mapper_ros
           {
             if (xyz[2] > params_.z_ground) // only publish points above the ground
             {
-              local_dynamic_cloud.push_back(pcl::PointXYZ(pt.x, pt.y, pt.z)); // replace with emplace_back (slightly more optimized according to chat)
+              local_dynamic_cloud.push_back(pcl::PointXYZ(pt.x, pt.y, pt.z)); 
             }
           } else { 
             if (xyz[2] > params_.z_ground) // only publish points above the ground
             {
-              local_static_cloud.push_back(pcl::PointXYZ(pt.x, pt.y, pt.z)); // replace with emplace_back (slightly more optimized according to chat)
+              local_static_cloud.push_back(pcl::PointXYZ(pt.x, pt.y, pt.z)); 
             }
           }
         }
@@ -840,7 +838,7 @@ namespace global_mapper_ros
 
     global_mapper_ptr_->Run(); 
     
-        // ── spin loop ──
+    // ── spin loop ──
     rclcpp::Rate spin_rate(100.0);
     while (rclcpp::ok())
     {      
@@ -885,10 +883,8 @@ int main(int argc, char **argv)
   auto node = std::make_shared<global_mapper_ros::GlobalMapperRos>();
   RCLCPP_INFO(node->get_logger(), "Global Mapper ROS Loop Started.");
   node->Run();
-  // std::cout << "Here 5" << std::endl;
 
   rclcpp::shutdown();
 
-  // std::cout << "Here 6" << std::endl;
   return 0;
 }

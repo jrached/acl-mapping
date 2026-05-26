@@ -81,7 +81,6 @@ private:
 
   // callbacks
   void PointCloudCallback(const sensor_msgs::msg::PointCloud2::ConstSharedPtr & cloud_msg);
-  // void PoseCallback(const dynus_interfaces::msg::State::SharedPtr pose_ptr);
   void PoseCallback(const geometry_msgs::msg::PoseStamped::SharedPtr pose_ptr);
   void GoalCallback(const geometry_msgs::msg::PoseStamped::SharedPtr goal_ptr);
   void OdomCallback(const nav_msgs::msg::Odometry::SharedPtr odom_ptr);
@@ -117,7 +116,6 @@ private:
 
   // subscribers
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_sub_;
-  // rclcpp::Subscription<dynus_interfaces::msg::State>::SharedPtr pose_sub_;
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr pose_sub_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;
