@@ -128,6 +128,7 @@ private:
   bool publish_cost_grid_;
   bool publish_path_;
   bool publish_dynamic_grid_;
+  bool publish_static_grid_;
   double clear_unknown_distance_;
   double target_altitude_;
 

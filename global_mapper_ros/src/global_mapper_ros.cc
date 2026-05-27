@@ -61,6 +61,7 @@ namespace global_mapper_ros
     this->declare_parameter<double>("cost_grid.target_altitude", 2.0);
     
     this->declare_parameter<bool>("temporal_grid.publish_dynamic_grid", true);
+    this->declare_parameter<bool>("temporal_grid.publish_static_grid", false);
     this->declare_parameter<double>("temporal_grid.occupied_thresh", 3.0); 
     this->declare_parameter<double>("temporal_grid.unoccupied_thresh", 0.5); 
     this->declare_parameter<int>("temporal_grid.neighbor_radius", 1); 
@@ -106,6 +107,7 @@ namespace global_mapper_ros
 
     // temporal_grid 
     fla_utils::SafeGetParam(*this, "temporal_grid.publish_dynamic_grid", publish_dynamic_grid_);
+    fla_utils::SafeGetParam(*this, "temporal_grid.publish_static_grid", publish_static_grid_);
     fla_utils::SafeGetParam(*this, "temporal_grid.occupied_thresh", params_.occupied_thresh);
     fla_utils::SafeGetParam(*this, "temporal_grid.unoccupied_thresh", params_.unoccupied_thresh); 
     fla_utils::SafeGetParam(*this, "temporal_grid.neighbor_radius", params_.neighbor_radius); 
@@ -197,6 +199,10 @@ namespace global_mapper_ros
     if (publish_dynamic_grid_)
     {
       dynamic_grid_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("dynamic_grid_topic", cloud_qos);
+    }
+
+    if (publish_static_grid_)
+    {
       static_grid_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("static_grid_topic", sensor_qos);
     }
 
@@ -608,7 +614,8 @@ namespace global_mapper_ros
       sensor_msgs::msg::PointCloud2 static_pointcloud_msg;
       PopulateDynamicPointCloudMsg(occupancy_grid, temporal_grid, &dynamic_pointcloud_msg, &static_pointcloud_msg);
       dynamic_grid_pub_->publish(dynamic_pointcloud_msg);
-      static_grid_pub_->publish(static_pointcloud_msg);
+      if (publish_static_grid_)
+        static_grid_pub_->publish(static_pointcloud_msg);
     }
 
     double duration = 1000 * (this->now().seconds() - prev_time);
