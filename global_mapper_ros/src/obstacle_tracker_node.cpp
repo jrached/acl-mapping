@@ -90,6 +90,9 @@ void aekf_update(EKFState &ekf_state, const Eigen::VectorXd &z, double alpha, do
     // Mark as assigned 
     ekf_state.assigned = true; 
 
+    // Update number of times the estimate has been seen 
+    ekf_state.times_seen++; 
+
 }
 
 // Associate cluster with the nearest EKF state using Euclidean distance
@@ -252,7 +255,6 @@ void ObstacleTrackerNode::declareAndsetParameters()
     this->declare_parameter("prediction_dt", 0.1);
     this->declare_parameter("time_to_delete_old_obstacles", 5.0);
     this->declare_parameter("cluster_bbox_cutoff_size", 3.0);
-    this->declare_parameter("cluster_bbox_cutoff_len", 0.1);
     this->declare_parameter("use_life_time_for_box_visualization", false);
     this->declare_parameter("box_visualization_duration", 3.0);
     this->declare_parameter("dynus_map_res", 0.5);
@@ -265,6 +267,7 @@ void ObstacleTrackerNode::declareAndsetParameters()
     this->declare_parameter("alpha", 0.5); 
     this->declare_parameter("gridnet_tolerance", 0.6);
     this->declare_parameter("time_to_hide_obstacle", 0.3);
+    this->declare_parameter("ekf_times_seen_thresh", 1);
     this->declare_parameter("diag_R", 0.01); 
     this->declare_parameter("diag_Q", 0.01); 
     this->declare_parameter("association_tolerance", 1.0); 
@@ -282,7 +285,6 @@ void ObstacleTrackerNode::declareAndsetParameters()
     prediction_dt_ = this->get_parameter("prediction_dt").as_double();
     time_to_delete_old_obstacles_ = this->get_parameter("time_to_delete_old_obstacles").as_double();
     cluster_bbox_cutoff_size_ = this->get_parameter("cluster_bbox_cutoff_size").as_double();
-    cluster_bbox_cutoff_len_ = this->get_parameter("cluster_bbox_cutoff_len").as_double();
     use_life_time_for_box_visualization_ = this->get_parameter("use_life_time_for_box_visualization").as_bool();
     box_visualization_duration_ = this->get_parameter("box_visualization_duration").as_double();
     dynus_map_res_ = this->get_parameter("dynus_map_res").as_double();
@@ -295,6 +297,7 @@ void ObstacleTrackerNode::declareAndsetParameters()
     alpha_ = this->get_parameter("alpha").as_double();
     gridnet_tolerance_ = this->get_parameter("gridnet_tolerance").as_double();
     time_to_hide_obstacle_ = this->get_parameter("time_to_hide_obstacle").as_double(); 
+    ekf_times_seen_thresh_ = this->get_parameter("ekf_times_seen_thresh").as_int(); 
     diag_R_ = this->get_parameter("diag_R").as_double(); 
     diag_Q_ = this->get_parameter("diag_Q").as_double(); 
     association_tolerance_ = this->get_parameter("association_tolerance").as_double();
@@ -425,12 +428,7 @@ void ObstacleTrackerNode::runTracker()
                 continue;
             }
 
-            // If shortest bounding box side length is too short, probably a spurious thin surface.
-            if (bbox.minCoeff() < cluster_bbox_cutoff_len_) {
-                continue; 
-            }
-
-            // Filter by density
+            // Filter by point density
             if (indices.indices.size() / (bbox.norm()) < bbox_density_) {
                 continue;
             }
@@ -529,9 +527,6 @@ void ObstacleTrackerNode::runTracker()
     // Publish predicted positions (using constant acceleration)
     publishPredictions(clusters);
 
-    // Remove static obstacles based on low velocity
-    // filterStaticObstacles();
-
 }
 
 // Function to delete old EKF states that have not been updated for a long time
@@ -619,9 +614,22 @@ void ObstacleTrackerNode::publishBoxes(const std::vector<Cluster> &clusters)
         current_velocity = Eigen::Vector3d(v * cos(phi) * cos(theta), v * cos(phi) * sin(theta), v * sin(phi));
         acceleration = Eigen::Vector3d(a * cos(phi) * cos(theta), a * cos(phi) * sin(theta), a * sin(phi));
 
-        if (current_velocity.norm() <= velocity_threshold_ || (start_time_ - cluster.ekf_state.time_updated) >= time_to_hide_obstacle_)
+        // Don't publish estimate if velocity is below velocity_threshold_
+        if (current_velocity.norm() <= velocity_threshold_) 
         {
             continue;
+        }
+
+        // Don't publish estimate if haven't received a measurement for time_to_hide_obstacle_ duration
+        if ((start_time_ - cluster.ekf_state.time_updated) >= time_to_hide_obstacle_)  
+        {
+            continue;
+        }
+
+        // Don't publish estimate if haven't received at least ekf_times_seen_thresh_ measurements 
+        if (cluster.ekf_state.times_seen < ekf_times_seen_thresh_)
+        {
+            continue; 
         }
     
         const double cx = x;
@@ -748,8 +756,20 @@ void ObstacleTrackerNode::publishPredictions(const std::vector<Cluster> &cluster
         y_values.push_back(current_position[1]);
         z_values.push_back(current_position[2]);
 
-        // Ignore low velocities (noise) and stale estimates
-        if (initial_velocity.norm() <= velocity_threshold_ || (start_time_ - clusters[i].ekf_state.time_updated) >= time_to_hide_obstacle_)
+        // Don't publish estimate if velocity is below velocity_threshold_
+        if (initial_velocity.norm() <= velocity_threshold_) 
+        {
+            continue;
+        }
+
+        // Don't publish estimate if haven't received a measurement for time_to_hide_obstacle_ duration
+        if ((start_time_ - clusters[i].ekf_state.time_updated) >= time_to_hide_obstacle_)  
+        {
+            continue;
+        }
+
+        // Don't publish estimate if haven't received at least ekf_times_seen_thresh_ measurements 
+        if (clusters[i].ekf_state.times_seen < ekf_times_seen_thresh_)
         {
             continue; 
         }
@@ -766,7 +786,6 @@ void ObstacleTrackerNode::publishPredictions(const std::vector<Cluster> &cluster
         marker.color = clusters[i].ekf_state.color;
         marker.color.a = 1.0f;
         marker.points.reserve(num_steps);
-
         
         double t = 0.0;
         for (int step = 0; step < num_steps; ++step)
@@ -824,9 +843,8 @@ void ObstacleTrackerNode::publishPredictions(const std::vector<Cluster> &cluster
         double y_diff = abs(y_values.front() - y_values.back());
         double z_diff = abs(z_values.front() - z_values.back());
 
-        double cutoff_length_threshold = 0.1; 
-
         // If the predicted trajectory is too short, skip the polynomial fitting
+        double cutoff_length_threshold = 0.1; 
         if (x_diff < cutoff_length_threshold && y_diff < cutoff_length_threshold && z_diff < cutoff_length_threshold)
         {
             t_values.clear();
@@ -978,27 +996,7 @@ double ObstacleTrackerNode::calculateVariance(const std::vector<double> &t, cons
     return residual_sum / (n - degree - 1); // variance = sum(residuals^2) / (n - p - 1)
 }
 
-// Function to filter out static obstacles based on low velocity
-void ObstacleTrackerNode::filterStaticObstacles()
-{
-    for (auto it = ekf_states_.begin(); it != ekf_states_.end();)
-    {
-        double velocity = it->x[5]; // Extract velocity from the state vector
-        double acceleration = it->x[6]; // Extract acceleration from the state vector 
-        if (velocity < velocity_threshold_ && acceleration < acceleration_threshold_)
-        {
-            // If the velocity is below the threshold, consider the obstacle static and remove it
-            it = ekf_states_.erase(it);
-        }
-        else
-        {
-            ++it;
-        }
-    }
-}
-
-// GridNet functions 
-// Function to reset EKF assignment
+// Function to reset EKF assignment each timestep
 void ObstacleTrackerNode::resetEKFassignments()
 {
     // Iterate through EKF states setting assigned field to false 

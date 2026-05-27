@@ -47,6 +47,7 @@ struct EKFState {
     std_msgs::msg::ColorRGBA color;
     float diag_R; 
     float diag_Q;
+    int times_seen;
 
     EKFState() {} // Constructor for Cluster struct
     EKFState(int state_size, Eigen::MatrixXd Q, Eigen::MatrixXd R, double time_propagated, double time_updated, double last_mes_time, Eigen::Vector3d bbox, int id, float alpha, float diag_R, float diag_Q) {
@@ -64,6 +65,7 @@ struct EKFState {
         this->id = id;
         this->assigned = true; 
         this->alpha = alpha; 
+        this->times_seen = 1;
         setColor();
     }
 
@@ -127,7 +129,6 @@ private:
     double prediction_dt_;
     double time_to_delete_old_obstacles_;
     double cluster_bbox_cutoff_size_;
-    double cluster_bbox_cutoff_len_;
     bool use_life_time_for_box_visualization_;
     double box_visualization_duration_;
     double dynus_map_res_;
@@ -141,6 +142,7 @@ private:
     float alpha_;
     double gridnet_tolerance_;
     double time_to_hide_obstacle_;
+    int ekf_times_seen_thresh_;
     bool diag_R_;
     bool diag_Q_;
     float association_tolerance_;
@@ -187,7 +189,6 @@ private:
     void getCentroidsAndSizesOfClusters(const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud, const std::vector<pcl::PointIndices> &cluster_indices, std::vector<Eigen::Vector3d> &cluster_centroids, std::vector<Eigen::Vector3d> &cluster_sizes);
     Eigen::VectorXd polyfit(const std::vector<double>& t, const std::vector<double>& y, int degree);
     double calculateVariance(const std::vector<double>& t, const std::vector<double>& y, const Eigen::VectorXd& beta, int degree);
-    void filterStaticObstacles();
     void runTracker();
 
     // GridNet functions 
