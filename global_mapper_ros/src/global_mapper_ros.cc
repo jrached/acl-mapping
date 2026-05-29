@@ -741,6 +741,9 @@ namespace global_mapper_ros
     // 3) Look up cloud to map and sensor to map transforms (they are not the same for deskewed point clouds)
     const std::string target_frame = params_.global_frame;
     std::string source_frame = cloud_msg->header.frame_id;
+    if (!source_frame.empty() && source_frame[0] == '/')  // For hardware, we need to remove transform name slash
+        source_frame.erase(0, 1);
+
     geometry_msgs::msg::TransformStamped cloud_to_map_tf;
     geometry_msgs::msg::TransformStamped sensor_to_map_tf;
 

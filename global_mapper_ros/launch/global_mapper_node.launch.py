@@ -15,6 +15,7 @@ def generate_launch_description():
     namespace_arg = DeclareLaunchArgument('namespace', default_value='NX01', description='Namespace of the nodes')
     param_file_arg = DeclareLaunchArgument('param_file', default_value='flightgoggles.yaml', description='name of param file')
     use_tracker_arg = DeclareLaunchArgument('use_tracker', default_value='true', description='Whether to use obstacle tracker or not')
+    publish_init_tf_arg = DeclareLaunchArgument('publish_init_tf', default_value='true', description='Whether to publish the transform between initial vehicle pose and world or not')
     pc_arg = DeclareLaunchArgument('depth_pointcloud_topic', default_value='mid360_PointCloud2',  description='input pointcloud topic')
     pose_topic_arg = DeclareLaunchArgument('pose_topic',           default_value='dlio/odom_node/pose',   description='input pose topic')
     goal_topic_arg = DeclareLaunchArgument('goal_topic',           default_value='/move_base_simple/goal',       description='input goal topic')
@@ -41,6 +42,7 @@ def generate_launch_description():
         # get launch arguments  
         namespace              = LaunchConfiguration('namespace').perform(context)
         use_tracker            = convert_str_to_bool(LaunchConfiguration('use_tracker').perform(context))
+        publish_init_tf            = convert_str_to_bool(LaunchConfiguration('publish_init_tf').perform(context))
         param_file             = LaunchConfiguration('param_file').perform(context)
         depth_pointcloud_topic = LaunchConfiguration('depth_pointcloud_topic').perform(context)
         pose_topic             = LaunchConfiguration('pose_topic').perform(context)
@@ -117,9 +119,12 @@ def generate_launch_description():
         )
 
         nodes_to_start = [
-                        init_pose_tf,
                         global_mapper_node
                         ]
+
+        if publish_init_tf: 
+            nodes_to_start = [init_pose_tf] + nodes_to_start 
+            
         if use_tracker: 
             nodes_to_start.append(obstacle_tracker_node)
 
@@ -129,6 +134,7 @@ def generate_launch_description():
     return LaunchDescription([
         namespace_arg,
         use_tracker_arg,
+        publish_init_tf_arg,
         param_file_arg,
         pc_arg,
         pose_topic_arg,

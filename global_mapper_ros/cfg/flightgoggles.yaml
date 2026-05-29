@@ -69,9 +69,9 @@ flight_goggles:
     diag_Q: 0.01                                     # [-] Diagonal values of KF process noise covariance matrix. 0.01 works well for hardware 
 
     # Obstacle tracker heuristic filter parameters 
-    min_cluster_size: 10 #8                          # [-] Minimum cluster pointcloud size
+    min_cluster_size: 8 #8                          # [-] Minimum cluster pointcloud size
     max_cluster_size: 1000                           # [-] Maximum cluster pointcloud size
-    bbox_density: 10.0 #8                            # [1/m] Minimum bounding box point density for detection to not be treated as noise. Computed as num_points / diag_len
+    bbox_density: 8.0 #8                            # [1/m] Minimum bounding box point density for detection to not be treated as noise. Computed as num_points / diag_len
     cluster_bbox_cutoff_size: 5.0                    # [m] Length of the diagonal of the bounding box for the clustering
     bbox_ratio: 2.5                                  # [-] Maximum ratio of two smallest bounding box side lengths (flat surface filter) 
     velocity_threshold: 0.4                          # [m/s] Velocity threshold to characterize as dynamic obstacles
