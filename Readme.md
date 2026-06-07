@@ -61,7 +61,7 @@ colcon build \
     -DCMAKE_CXX_COMPILER=/usr/bin/g++ \
     -DCMAKE_INSTALL_PREFIX=$PWD/install \
     -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_CXX_FLAGS_RELEASE="-O3 -march=native" \
+    -DCMAKE_CXX_FLAGS_RELEASE="-O3" \
     -DEIGEN_DONT_VECTORIZE=OFF \
   --merge-install
 
