@@ -20,15 +20,23 @@ struct Params
   double r2 = 8.0;
   double z_min_unknown = 0.2;
   double z_max_unknown = 5.0;
+  double target_altitude = 0.0;
+  double cloud_ds_size = 0.1;
+  std::string odom_frame;
+  std::string sensor_frame;
 
   // occupancy_grid
   double init_value = 0;
   double hit_inc = 0.2;
   double miss_inc = -0.01;
   double occupancy_threshold = 0.6;
+  bool publish_occupancy_grid = true;
+  bool publish_unknown_grid = false;
+  double clear_unknown_distance = 5.0;
 
   // distance_grid
   int truncation_distance = 6;  // in voxels
+  bool publish_distance_grid = false;
 
   // cost_grid
   int inflation_distance = 4;
@@ -36,12 +44,16 @@ struct Params
   int inflation_weight = 0;
   int unknown_weight = 20;
   int obstacle_weight = 10000;
+  bool publish_cost_grid = false;
+  bool publish_path = false;
 
   // temporal grid 
   float occupied_thresh = 3.0; 
   float unoccupied_thresh = 0.5;
   int neighbor_radius = 1; 
   int static_neighbor_thresh = 1; 
+  bool publish_dynamic_grid = true;
+  bool publish_static_grid = false;
   
 };
 }  // namespace global_mapper

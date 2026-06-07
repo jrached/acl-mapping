@@ -6,14 +6,14 @@ using namespace std::chrono_literals;
 namespace global_mapper_ros
 {
   GlobalMapperRos::GlobalMapperRos()
-      : Node("global_mapper_ros"), publish_occupancy_grid_(false), publish_distance_grid_(false), publish_cost_grid_(false), publish_path_(false), publish_dynamic_grid_(false), clear_unknown_distance_(0.0), target_altitude_(0.0), start_time_(this->now().seconds()), cloud_(new pcl::PointCloud<pcl::PointXYZ>)
+      : Node("global_mapper_ros"), start_time_(this->now().seconds()), cloud_(new pcl::PointCloud<pcl::PointXYZ>)
   {
 
     // Define transform buffer and listener 
     tf_buffer_ptr_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
     tf_listener_ptr_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_ptr_);
-    name_drone = this->get_namespace();
-    name_drone.erase(std::remove(name_drone.begin(), name_drone.end(), '/'), name_drone.end()); // remove slashes
+    name_drone_ = this->get_namespace();
+    name_drone_.erase(std::remove(name_drone_.begin(), name_drone_.end(), '/'), name_drone_.end()); // remove slashes
 
     // Instantiate cloud pointer to empty cloud message 
     const sensor_msgs::msg::PointCloud2::SharedPtr cloud_msg_ = std::make_shared<sensor_msgs::msg::PointCloud2>();
@@ -38,6 +38,7 @@ namespace global_mapper_ros
     this->declare_parameter<double>("r2", 8.0);
     this->declare_parameter<double>("z_min_unknown", 0.1);
     this->declare_parameter<double>("z_max_unknown", 5.0);
+    this->declare_parameter<double>("cloud_ds_size", 0.1);
 
     // namespaced ones:
     this->declare_parameter<double>("occupancy_grid.init_value", 0.0);
@@ -68,8 +69,8 @@ namespace global_mapper_ros
     this->declare_parameter<int>("temporal_grid.static_neighbor_thresh", 1);
 
     fla_utils::SafeGetParam(*this, "global_frame", params_.global_frame);
-    fla_utils::SafeGetParam(*this, "odom_frame", odom_frame_);
-    fla_utils::SafeGetParam(*this, "sensor_frame", sensor_frame_);
+    fla_utils::SafeGetParam(*this, "odom_frame", params_.odom_frame);
+    fla_utils::SafeGetParam(*this, "sensor_frame", params_.sensor_frame);
     fla_utils::SafeGetParam(*this, "origin", params_.origin);
     fla_utils::SafeGetParam(*this, "world_dimensions", params_.world_dimensions);
     fla_utils::SafeGetParam(*this, "resolution", params_.resolution);
@@ -81,33 +82,34 @@ namespace global_mapper_ros
     fla_utils::SafeGetParam(*this, "r2", params_.r2);
     fla_utils::SafeGetParam(*this, "z_min_unknown", params_.z_min_unknown);
     fla_utils::SafeGetParam(*this, "z_max_unknown", params_.z_max_unknown);
+    fla_utils::SafeGetParam(*this, "cloud_ds_size", params_.cloud_ds_size);
 
     // occupancy_grid
     fla_utils::SafeGetParam(*this, "occupancy_grid.init_value", params_.init_value);
     fla_utils::SafeGetParam(*this, "occupancy_grid.hit_inc", params_.hit_inc);
     fla_utils::SafeGetParam(*this, "occupancy_grid.miss_inc", params_.miss_inc);
     fla_utils::SafeGetParam(*this, "occupancy_grid.occupancy_threshold", params_.occupancy_threshold);
-    fla_utils::SafeGetParam(*this, "occupancy_grid.publish_unknown_grid", publish_unknown_grid_);
-    fla_utils::SafeGetParam(*this, "occupancy_grid.publish_occupancy_grid", publish_occupancy_grid_);
-    fla_utils::SafeGetParam(*this, "occupancy_grid.clear_unknown_distance", clear_unknown_distance_);
+    fla_utils::SafeGetParam(*this, "occupancy_grid.publish_unknown_grid", params_.publish_unknown_grid);
+    fla_utils::SafeGetParam(*this, "occupancy_grid.publish_occupancy_grid", params_.publish_occupancy_grid);
+    fla_utils::SafeGetParam(*this, "occupancy_grid.clear_unknown_distance", params_.clear_unknown_distance);
 
     // distance_grid
     fla_utils::SafeGetParam(*this, "distance_grid.truncation_distance", params_.truncation_distance);
-    fla_utils::SafeGetParam(*this, "distance_grid.publish_distance_grid", publish_distance_grid_);
+    fla_utils::SafeGetParam(*this, "distance_grid.publish_distance_grid", params_.publish_distance_grid);
 
     // cost_grid
-    fla_utils::SafeGetParam(*this, "cost_grid.publish_cost_grid", publish_cost_grid_);
+    fla_utils::SafeGetParam(*this, "cost_grid.publish_cost_grid", params_.publish_cost_grid);
     fla_utils::SafeGetParam(*this, "cost_grid.inflation_distance", params_.inflation_distance);
-    fla_utils::SafeGetParam(*this, "cost_grid.publish_path", publish_path_);
+    fla_utils::SafeGetParam(*this, "cost_grid.publish_path", params_.publish_path);
     fla_utils::SafeGetParam(*this, "cost_grid.altitude_weight", params_.altitude_weight);
     fla_utils::SafeGetParam(*this, "cost_grid.inflation_weight", params_.inflation_weight);
     fla_utils::SafeGetParam(*this, "cost_grid.unknown_weight", params_.unknown_weight);
     fla_utils::SafeGetParam(*this, "cost_grid.obstacle_weight", params_.obstacle_weight);
-    fla_utils::SafeGetParam(*this, "cost_grid.target_altitude", target_altitude_);
+    fla_utils::SafeGetParam(*this, "cost_grid.target_altitude", params_.target_altitude);
 
     // temporal_grid 
-    fla_utils::SafeGetParam(*this, "temporal_grid.publish_dynamic_grid", publish_dynamic_grid_);
-    fla_utils::SafeGetParam(*this, "temporal_grid.publish_static_grid", publish_static_grid_);
+    fla_utils::SafeGetParam(*this, "temporal_grid.publish_dynamic_grid", params_.publish_dynamic_grid);
+    fla_utils::SafeGetParam(*this, "temporal_grid.publish_static_grid", params_.publish_static_grid);
     fla_utils::SafeGetParam(*this, "temporal_grid.occupied_thresh", params_.occupied_thresh);
     fla_utils::SafeGetParam(*this, "temporal_grid.unoccupied_thresh", params_.unoccupied_thresh); 
     fla_utils::SafeGetParam(*this, "temporal_grid.neighbor_radius", params_.neighbor_radius); 
@@ -127,24 +129,25 @@ namespace global_mapper_ros
     RCLCPP_INFO(this->get_logger(), "  r2: %f", params_.r2);
     RCLCPP_INFO(this->get_logger(), "  z_min_unknown: %f", params_.z_min_unknown);
     RCLCPP_INFO(this->get_logger(), "  z_max_unknown: %f", params_.z_max_unknown);
+    RCLCPP_INFO(this->get_logger(), "  cloud voxel grid downsample leaf size: %f", params_.cloud_ds_size);
     RCLCPP_INFO(this->get_logger(), "  occupancy_grid.init_value: %f", params_.init_value);
     RCLCPP_INFO(this->get_logger(), "  occupancy_grid.hit_inc: %f", params_.hit_inc);
     RCLCPP_INFO(this->get_logger(), "  occupancy_grid.miss_inc: %f", params_.miss_inc);
     RCLCPP_INFO(this->get_logger(), "  occupancy_grid.occupancy_threshold: %f", params_.occupancy_threshold);
-    RCLCPP_INFO(this->get_logger(), "  occupancy_grid.publish_unknown_grid: %s", publish_unknown_grid_ ? "true" : "false");
-    RCLCPP_INFO(this->get_logger(), "  occupancy_grid.publish_occupancy_grid: %s", publish_occupancy_grid_ ? "true" : "false");
-    RCLCPP_INFO(this->get_logger(), "  occupancy_grid.clear_unknown_distance: %f", clear_unknown_distance_);
+    RCLCPP_INFO(this->get_logger(), "  occupancy_grid.publish_unknown_grid: %s", params_.publish_unknown_grid ? "true" : "false");
+    RCLCPP_INFO(this->get_logger(), "  occupancy_grid.publish_occupancy_grid: %s", params_.publish_occupancy_grid ? "true" : "false");
+    RCLCPP_INFO(this->get_logger(), "  occupancy_grid.clear_unknown_distance: %f", params_.clear_unknown_distance);
     RCLCPP_INFO(this->get_logger(), "  distance_grid.truncation_distance: %d", params_.truncation_distance);
-    RCLCPP_INFO(this->get_logger(), "  distance_grid.publish_distance_grid: %s", publish_distance_grid_ ? "true" : "false");
-    RCLCPP_INFO(this->get_logger(), "  cost_grid.publish_cost_grid: %s", publish_cost_grid_ ? "true" : "false");
+    RCLCPP_INFO(this->get_logger(), "  distance_grid.publish_distance_grid: %s", params_.publish_distance_grid ? "true" : "false");
+    RCLCPP_INFO(this->get_logger(), "  cost_grid.publish_cost_grid: %s", params_.publish_cost_grid ? "true" : "false");
     RCLCPP_INFO(this->get_logger(), "  cost_grid.inflation_distance: %d", params_.inflation_distance);
-    RCLCPP_INFO(this->get_logger(), "  cost_grid.publish_path: %s", publish_path_ ? "true" : "false");
+    RCLCPP_INFO(this->get_logger(), "  cost_grid.publish_path: %s", params_.publish_path ? "true" : "false");
     RCLCPP_INFO(this->get_logger(), "  cost_grid.altitude_weight: %d", params_.altitude_weight);
     RCLCPP_INFO(this->get_logger(), "  cost_grid.inflation_weight: %d", params_.inflation_weight);
     RCLCPP_INFO(this->get_logger(), "  cost_grid.unknown_weight: %d", params_.unknown_weight);
     RCLCPP_INFO(this->get_logger(), "  cost_grid.obstacle_weight: %d", params_.obstacle_weight);
-    RCLCPP_INFO(this->get_logger(), "  cost_grid.target_altitude: %f", target_altitude_);
-    RCLCPP_INFO(this->get_logger(), "  temporal_grid.publish_dynamic_grid: %s", publish_dynamic_grid_ ? "true" : "false");
+    RCLCPP_INFO(this->get_logger(), "  cost_grid.target_altitude: %f", params_.target_altitude);
+    RCLCPP_INFO(this->get_logger(), "  temporal_grid.publish_dynamic_grid: %s", params_.publish_dynamic_grid ? "true" : "false");
   }
 
   void GlobalMapperRos::InitSubscribers()
@@ -169,39 +172,39 @@ namespace global_mapper_ros
     rclcpp::QoS cloud_qos(rclcpp::KeepLast(1));
     cloud_qos.reliable();
 
-    if (publish_occupancy_grid_)
+    if (params_.publish_occupancy_grid)
     {
       occ_grid_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("occupancy_grid_topic", sensor_qos);
     }
 
-    if (publish_unknown_grid_)
+    if (params_.publish_unknown_grid)
     {
       unknown_grid_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("unknown_grid_topic", sensor_qos);
       frontier_grid_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("frontier_grid_topic", sensor_qos);
     }
 
-    if (publish_distance_grid_)
+    if (params_.publish_distance_grid)
     {
       dist_grid_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("distance_grid_topic", sensor_qos);
     }
 
-    if (publish_cost_grid_)
+    if (params_.publish_cost_grid)
     {
       cost_grid_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("cost_grid_topic", sensor_qos);
     }
 
-    if (publish_path_)
+    if (params_.publish_path)
     {
       path_pub_ = this->create_publisher<nav_msgs::msg::Path>("path_topic", sensor_qos);
       sparse_path_pub_ = this->create_publisher<nav_msgs::msg::Path>("sparse_path_topic", sensor_qos);
     }
 
-    if (publish_dynamic_grid_)
+    if (params_.publish_dynamic_grid)
     {
       dynamic_grid_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("dynamic_grid_topic", cloud_qos);
     }
 
-    if (publish_static_grid_)
+    if (params_.publish_static_grid)
     {
       static_grid_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("static_grid_topic", sensor_qos);
     }
@@ -223,7 +226,7 @@ namespace global_mapper_ros
 
     try
     {
-      transform_stamped = tf_buffer_ptr_->lookupTransform(params_.global_frame, odom_frame_, rclcpp::Time(0), 20ms);
+      transform_stamped = tf_buffer_ptr_->lookupTransform(params_.global_frame, params_.odom_frame, rclcpp::Time(0), 20ms);
       transform(0) = transform_stamped.transform.translation.x;
       transform(1) = transform_stamped.transform.translation.y;
       transform(2) = transform_stamped.transform.translation.z;
@@ -335,7 +338,7 @@ namespace global_mapper_ros
 
     try
     {
-      transform_stamped = tf_buffer_ptr_->lookupTransform(params_.global_frame, odom_frame_, rclcpp::Time(0), 20ms);
+      transform_stamped = tf_buffer_ptr_->lookupTransform(params_.global_frame, params_.odom_frame, rclcpp::Time(0), 20ms);
       transform(0) = transform_stamped.transform.translation.x;
       transform(1) = transform_stamped.transform.translation.y;
       transform(2) = transform_stamped.transform.translation.z;
@@ -396,7 +399,7 @@ namespace global_mapper_ros
 
     try
     {
-      transform_stamped = tf_buffer_ptr_->lookupTransform(params_.global_frame, odom_frame_, rclcpp::Time(0), 20ms);
+      transform_stamped = tf_buffer_ptr_->lookupTransform(params_.global_frame, params_.odom_frame, rclcpp::Time(0), 20ms);
       transform(0) = transform_stamped.transform.translation.x;
       transform(1) = transform_stamped.transform.translation.y;
       transform(2) = transform_stamped.transform.translation.z;
@@ -564,35 +567,35 @@ namespace global_mapper_ros
 
     global_mapper_ptr_->GetVoxelGrids(&occupancy_grid, &distance_grid, &cost_grid, &temporal_grid);
 
-    if (publish_occupancy_grid_)
+    if (params_.publish_occupancy_grid)
     {
       sensor_msgs::msg::PointCloud2 occ_pointcloud_msg;
       PopulateOccupancyPointCloudMsg(occupancy_grid, &occ_pointcloud_msg);
       occ_grid_pub_->publish(occ_pointcloud_msg);
     }
 
-    if (publish_unknown_grid_)
+    if (params_.publish_unknown_grid)
     {
       sensor_msgs::msg::PointCloud2 unknown_pointcloud_msg;
       PopulateUnknownPointCloudMsg(occupancy_grid, &unknown_pointcloud_msg);
       unknown_grid_pub_->publish(unknown_pointcloud_msg);
     }
 
-    if (publish_distance_grid_)
+    if (params_.publish_distance_grid)
     {
       sensor_msgs::msg::PointCloud2 dist_pointcloud_msg;
       PopulateDistancePointCloudMsg(distance_grid, &dist_pointcloud_msg);
       dist_grid_pub_->publish(dist_pointcloud_msg);
     }
 
-    if (publish_cost_grid_)
+    if (params_.publish_cost_grid)
     {
       sensor_msgs::msg::PointCloud2 cost_pointcloud_msg;
       PopulateCostPointCloudMsg(cost_grid, &cost_pointcloud_msg);
       cost_grid_pub_->publish(cost_pointcloud_msg);
     }
 
-    if (publish_path_)
+    if (params_.publish_path)
     {
       double origin_xyz[3];
       global_mapper_ptr_->GetOrigin(origin_xyz);
@@ -608,13 +611,13 @@ namespace global_mapper_ros
       sparse_path_pub_->publish(sparse_path_msg);
     }
 
-    if (publish_dynamic_grid_)
+    if (params_.publish_dynamic_grid)
     {
       sensor_msgs::msg::PointCloud2 dynamic_pointcloud_msg;
       sensor_msgs::msg::PointCloud2 static_pointcloud_msg;
       PopulateDynamicPointCloudMsg(occupancy_grid, temporal_grid, &dynamic_pointcloud_msg, &static_pointcloud_msg);
       dynamic_grid_pub_->publish(dynamic_pointcloud_msg);
-      if (publish_static_grid_)
+      if (params_.publish_static_grid)
         static_grid_pub_->publish(static_pointcloud_msg);
     }
 
@@ -650,7 +653,7 @@ namespace global_mapper_ros
     {
       tf_stamped = tf_buffer_ptr_->lookupTransform(
           target_frame,
-          odom_frame_,
+          params_.odom_frame,
           rclcpp::Time(0),
           rclcpp::Duration(std::chrono::milliseconds(20)));
     }
@@ -692,7 +695,7 @@ namespace global_mapper_ros
 
   void GlobalMapperRos::GoalCallback(const geometry_msgs::msg::PoseStamped::SharedPtr goal_ptr)
   {
-    double xyz[3] = {goal_ptr->pose.position.x, goal_ptr->pose.position.y, target_altitude_};
+    double xyz[3] = {goal_ptr->pose.position.x, goal_ptr->pose.position.y, params_.target_altitude};
     if (!std::isfinite(xyz[0]) || !std::isfinite(xyz[1]) || !std::isfinite(xyz[2]))
     {
       RCLCPP_WARN(this->get_logger(), "Received invalid goal coordinates. Skipping.");
@@ -720,15 +723,24 @@ namespace global_mapper_ros
       got_depth_image_ = true;
     }
 
-    // 2) Convert ROS2 PointCloud2 -> PCL PointCloud<PointXYZI>
-    pcl::PointCloud<pcl::PointXYZ> tmp;
-    pcl::fromROSMsg(*cloud_msg, tmp);
+    // 2) Convert ROS2 PointCloud2 -> PCL PointCloud<PointXYZI> and downsample 
+    auto tmp = std::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
+    pcl::fromROSMsg(*cloud_msg, *tmp);
+
+    // Downsample using VoxelGrid 
+    pcl::VoxelGrid<pcl::PointXYZI> voxel_filter;
+    voxel_filter.setInputCloud(tmp);
+    voxel_filter.setLeafSize(params_.cloud_ds_size, params_.cloud_ds_size, params_.cloud_ds_size);
+
+    pcl::PointCloud<pcl::PointXYZI> cloud_filtered;
+    voxel_filter.filter(cloud_filtered);
+
     auto in = std::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
-    in->points.reserve(tmp.size());
+    in->points.reserve(cloud_filtered.size());
 
-    std::cout << "Pointcloud size: " << tmp.size() << std::endl; 
+    std::cout << "Pointcloud size: " << cloud_filtered.size() << std::endl; 
 
-    for (const auto &pt : tmp.points)
+    for (const auto &pt : cloud_filtered.points)
     {
       pcl::PointXYZI pti;
       pti.x = pt.x;
@@ -762,7 +774,7 @@ namespace global_mapper_ros
       return;
     }
 
-    source_frame = sensor_frame_;
+    source_frame = params_.sensor_frame;
 
     try
     {
@@ -827,6 +839,10 @@ namespace global_mapper_ros
     GetParams();
     InitSubscribers();
     InitPublishers();
+
+    // Prepend namespace to transform frames 
+    params_.odom_frame = name_drone_ + "/" + params_.odom_frame;
+    params_.sensor_frame = name_drone_ + "/" + params_.sensor_frame;
 
     // ── create & store the ProcessStatus on the heap ──
     // `shared_from_this()` is your node pointer

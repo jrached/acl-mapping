@@ -95,10 +95,8 @@ private:
   };
 
   // name of the drone
-  std::string name_drone;
-  std::string odom_frame_;
-  std::string sensor_frame_;
-
+  std::string name_drone_;
+  
   // publishers
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr occ_grid_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr unknown_grid_pub_;
@@ -122,15 +120,6 @@ private:
 
   // params
   global_mapper::Params params_;
-  bool publish_occupancy_grid_;
-  bool publish_unknown_grid_;
-  bool publish_distance_grid_;
-  bool publish_cost_grid_;
-  bool publish_path_;
-  bool publish_dynamic_grid_;
-  bool publish_static_grid_;
-  double clear_unknown_distance_;
-  double target_altitude_;
 
   // i/o flags
   bool got_goal_;

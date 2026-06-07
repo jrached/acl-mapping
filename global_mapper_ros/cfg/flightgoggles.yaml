@@ -2,9 +2,9 @@ flight_goggles:
   ros__parameters:
 
     # Map parameters 
-    global_frame: world_mocap #map
-    odom_frame: PX05/init_pose
-    sensor_frame: PX05/base_link
+    global_frame: world_mocap 
+    odom_frame: init_pose
+    sensor_frame: base_link
     origin: [0.0, 0.0, 0.12]                         # [m]
     world_dimensions: [16.0, 16.0, 5.0]              # [m]  16   16   10
     resolution: 0.2                                  # [m]  
@@ -17,19 +17,20 @@ flight_goggles:
     r2: 11.3                                         # [m] See above
     z_min_unknown: 0.1                               # [m] points below z_min_unkown are not published in the unkown grid
     z_max_unknown: 10.0                              # [m] points above z_max_unkown are not published in the unkown grid
+    cloud_ds_size: 0.1                               # [m] voxel size for point cloud's voxel grid downsample 
 
     occupancy_grid:
       publish_occupancy_grid: true
       publish_unknown_grid: false
       init_value: 0.0
-      hit_inc: 0.6 #0.4
-      miss_inc: -0.3 #-0.1
+      hit_inc: 0.6 
+      miss_inc: -0.3 
       occupancy_threshold: 0.6                       # [-] Must be in [0.0, 1.0]
       clear_unknown_distance: 5.0                    # [m]  #Nan ¿and inf? --> Clear the unkown voxels up to this distance
 
     distance_grid:
       publish_distance_grid: false
-      truncation_distance: 6  # [voxels]
+      truncation_distance: 6                         # [voxels]
 
     cost_grid:
       publish_cost_grid: false
@@ -45,9 +46,9 @@ flight_goggles:
       publish_dynamic_grid: true   
       publish_static_grid: false                     # [-] Whether to publish static cloud. NOTE: need to publish dynamic cloud to publish static cloud            
       occupied_thresh: 3.0                           # [s] How long a voxel needs to be occupied for it to be considered static 
-      unoccupied_thresh: 1.0 #1.0                    # [s] How long a voxel needs to be unoccupied for it to be considered free space 
-      neighbor_radius: 1 #2                          # [-] For n = (1 + 2 * r) ^ 3 number of neighbors to explore, neighbor radius is r
-      static_neighbor_thresh: 1 #6                   # [-] Number of static neighbors for the current voxel to be considered static by association
+      unoccupied_thresh: 1.0                         # [s] How long a voxel needs to be unoccupied for it to be considered free space 
+      neighbor_radius: 1                             # [-] For n = (1 + 2 * r) ^ 3 number of neighbors to explore, neighbor radius is r
+      static_neighbor_thresh: 1                      # [-] Number of static neighbors for the current voxel to be considered static by association
 
     # Obstacle tracker GridNet parameters
     use_gridnet: true                                # [-] Whether to use learning-based obstacle detector
@@ -60,8 +61,6 @@ flight_goggles:
     adaptive_kf_dt: 0.1                              # [s] Time step for the adaptive KF
     association_tolerance: 1.0                       # [m] Maximum distance for a KF estimate to be associated with a measurement from the 3D tracker
     cluster_tolerance: 0.3                           # [m] Maximum distance from cluster for a point to be considered a member of that cluster 
-    time_to_hide_obstacle: 0.5                       # [s] Number of seconds after which to hide a KF estimate without yet deleting it
-    time_to_delete_old_obstacles: 1.0                # [s] Time to delete old obstacles
     use_life_time_for_box_visualization: true        # [-] Use life time for the box visualization - if false, we keep the box until the end of the simulation
     box_visualization_duration: 0.1                  # [s] Duration to visualize the bounding box
     alpha: 0.05                                      # [] Weight for bounding box smoothing
@@ -69,14 +68,17 @@ flight_goggles:
     diag_Q: 0.01                                     # [-] Diagonal values of KF process noise covariance matrix. 0.01 works well for hardware 
 
     # Obstacle tracker heuristic filter parameters 
-    min_cluster_size: 8 #8                          # [-] Minimum cluster pointcloud size
+    min_cluster_size: 10                             # [-] Minimum cluster pointcloud size
     max_cluster_size: 1000                           # [-] Maximum cluster pointcloud size
-    bbox_density: 8.0 #8                            # [1/m] Minimum bounding box point density for detection to not be treated as noise. Computed as num_points / diag_len
-    cluster_bbox_cutoff_size: 5.0                    # [m] Length of the diagonal of the bounding box for the clustering
-    bbox_ratio: 2.5                                  # [-] Maximum ratio of two smallest bounding box side lengths (flat surface filter) 
-    velocity_threshold: 0.4                          # [m/s] Velocity threshold to characterize as dynamic obstacles
-    ekf_times_seen_thresh: 5                         # [-] Minimum number of recorded measurements for an ekf estimate before publishing it. Consistency check to remove artifacts.
+    bbox_density: 10.0                               # [1/m] Minimum bounding box point density for detection to not be treated as noise. Computed as num_points / diag_len
+    cluster_bbox_cutoff_size: 5.0                    # [m] Maximum length of the bounding box diagonal 
+    flat_surface_thresh: 3.0                         # [-] Maximum ratio of two shortest bounding box side lengths (lower for aggressive filtering) 
+    thin_surface_thresh: 3.0                         # [-] Maximum ratio of two longest bounding box side lengths (lower for aggressive filtering)
+    velocity_threshold: 0.2                          # [m/s] Velocity threshold to characterize as dynamic obstacles
+    ekf_times_seen_thresh: 2                         # [-] Minimum number of recorded measurements for an ekf estimate before publishing it. Consistency check to remove artifacts.
+    time_to_hide_obstacle: 0.3                       # [s] Number of seconds after which to hide a KF estimate without yet deleting it
+    time_to_delete_old_obstacles: 1.0                # [s] Time to delete old ekf estimates
 
     # Obstacle tracker prediction parameters 
-    prediction_horizon: 1.0                          # [s] Prediction horizon
+    prediction_horizon: 0.5                          # [s] Prediction horizon
     prediction_dt: 0.1                               # [s] Time step for the prediction

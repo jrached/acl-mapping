@@ -262,7 +262,8 @@ void ObstacleTrackerNode::declareAndsetParameters()
     this->declare_parameter("acceleration_threshold", 0.1);
     this->declare_parameter("use_hardware", false);
     this->declare_parameter("bbox_density", 1.0);
-    this->declare_parameter("bbox_ratio", 2.0);
+    this->declare_parameter("flat_surface_thresh", 3.0);
+    this->declare_parameter("thin_surface_thresh", 3.0);
     this->declare_parameter("use_gridnet", false); 
     this->declare_parameter("alpha", 0.5); 
     this->declare_parameter("gridnet_tolerance", 0.6);
@@ -292,7 +293,8 @@ void ObstacleTrackerNode::declareAndsetParameters()
     acceleration_threshold_ = this->get_parameter("acceleration_threshold").as_double();
     use_hardware_ = this->get_parameter("use_hardware").as_bool();
     bbox_density_ = this->get_parameter("bbox_density").as_double();
-    bbox_ratio_ = this->get_parameter("bbox_ratio").as_double();
+    flat_surface_thresh_ = this->get_parameter("flat_surface_thresh").as_double();
+    thin_surface_thresh_ = this->get_parameter("thin_surface_thresh").as_double();
     use_gridnet_ = this->get_parameter("use_gridnet").as_bool(); 
     alpha_ = this->get_parameter("alpha").as_double();
     gridnet_tolerance_ = this->get_parameter("gridnet_tolerance").as_double();
@@ -438,8 +440,14 @@ void ObstacleTrackerNode::runTracker()
             std::sort(sorted_bbox.data(), sorted_bbox.data() + 3);
             double smallest = sorted_bbox(0);
             double second_smallest = sorted_bbox(1);
-            if (second_smallest / smallest > bbox_ratio_) {
+            double longest = sorted_bbox(2);
+            if (second_smallest / smallest > flat_surface_thresh_) {
                 continue;
+            }
+            
+            // Filter by ration between two longest bbox side-lengths (thin surface filter) 
+            if (longest / second_smallest > thin_surface_thresh_) { 
+                continue; 
             }
 
             // Find the closest EKF state (data association)

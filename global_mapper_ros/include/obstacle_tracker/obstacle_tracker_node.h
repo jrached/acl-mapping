@@ -136,7 +136,8 @@ private:
     double acceleration_threshold_;
     bool use_hardware_;
     float bbox_density_;
-    float bbox_ratio_;
+    float flat_surface_thresh_;
+    float thin_surface_thresh_;
     double start_time_;
     bool use_gridnet_; 
     float alpha_;
