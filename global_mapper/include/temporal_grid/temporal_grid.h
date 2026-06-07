@@ -16,7 +16,7 @@ class TemporalGrid: public voxel_grid::VoxelGrid<std::vector<double>> // Might w
 {
 public: 
 // Constructor and destructor go here along with any other public methods 
-    TemporalGrid(const double origin[3], const double world_dimensions[3], const float resolution, float occupied_threshold, float unoccupied_threshold);
+    TemporalGrid(const double origin[3], const double world_dimensions[3], const float resolution, float occupied_threshold, float unoccupied_threshold, int neighbor_radius, int static_neighbor_thresh);
     void UpdateTemporalInfo(const int ixyz[3], const bool is_occupied, const bool is_unknown, const double timestamp); 
     void UpdateTemporalInfo(const double xyz[3], const bool is_occupied, const bool is_unknown, const double timestamp); 
     bool AreNeighborsStatic(const int ixyz[3], int neigh_thresh);
@@ -38,6 +38,8 @@ private:
 // Private methods go here
     float occupied_threshold_;
     float unoccupied_threshold_; 
+    int neighbor_radius_;
+    int static_neighbor_thresh_; 
     float resolution_;
     double timestamp_;
     std::vector<std::vector<int>> offsets_;

@@ -3,10 +3,6 @@
 #include "occupancy_grid/occupancy_grid.h"
 #include "global_mapper/global_mapper.h"
 
-// TODO: Make occupancy thresholds parameters
-float OCCUPIED_THRESH = 3.0; 
-float UNOCCUPIED_THRESH = 0.5;
-
 
 namespace global_mapper
 {
@@ -16,7 +12,8 @@ namespace global_mapper
         distance_grid_(params_.origin.data(), params_.world_dimensions.data(), params_.resolution,
                        params_.truncation_distance),
         cost_grid_(params_.origin.data(), params_.world_dimensions.data(), params_.resolution), 
-        temporal_grid_(params_.origin.data(), params_.world_dimensions.data(), params_.resolution, OCCUPIED_THRESH, UNOCCUPIED_THRESH), data_ready_(0) // TODO: initialize temporal grid here
+        temporal_grid_(params_.origin.data(), params_.world_dimensions.data(), params_.resolution, params_.occupied_thresh, params_.unoccupied_thresh, params_.neighbor_radius, params_.static_neighbor_thresh), 
+        data_ready_(0) 
   {
     origin_[0] = 0.0;
     origin_[1] = 0.0;
@@ -178,14 +175,18 @@ namespace global_mapper
 
   void GlobalMapper::UpdateOccupancyGrid()
   {
+    auto now = std::chrono::high_resolution_clock::now();
+    double prev_time = std::chrono::duration<double>(now.time_since_epoch()).count();
+
     PointCloud::ConstPtr cloud_ptr = PopPointCloud();
     InsertPointCloud(cloud_ptr);
 
+    // // Define clear radius
     // printf("RadiusDrone=%f\n", params_.radius_drone);
-    // int n = (params_.radius_drone) / (params_.resolution);  // Number of voxels to clear in each side
+    // int n = (params_.radius_drone) / (params_.resolution);  // Number of voxels to clear in each side. TODO: should be ceil of this
     // n = (n > 1) ? n : 1;                                    // force n to be at least 1
-
     int n = 1;
+
     // clear voxels around vehicle
     int origin_ixyz[3];
     occupancy_grid_.WorldToGrid(origin_, origin_ixyz);
@@ -195,7 +196,6 @@ namespace global_mapper
       {
         for (int k = -n; k <= n; k++)
         {
-          // printf("Clearing cell around vehicle!");
           int ixyz[3];
           ixyz[0] = origin_ixyz[0] + i;
           ixyz[1] = origin_ixyz[1] + j;
@@ -204,6 +204,12 @@ namespace global_mapper
         }
       }
     }
+
+    now = std::chrono::high_resolution_clock::now();
+    double curr_time = std::chrono::duration<double>(now.time_since_epoch()).count();
+
+    double elapsed_time = (curr_time - prev_time) * 1e3;   
+    std::cout << "\nMap insertion duration: " << elapsed_time << " ms" << std::endl;
   }
 
   void GlobalMapper::UpdateCostGrid()
@@ -281,7 +287,7 @@ namespace global_mapper
   void GlobalMapper::Spin()
   {
     static int spincount = 0;
-    while (true) // TODO switch back to loop 
+    while (true) 
     {
       std::unique_lock<std::mutex> data_lock(data_mutex_);
       condition_.wait(data_lock, [this]
@@ -290,7 +296,7 @@ namespace global_mapper
 
       std::unique_lock<std::mutex> output_lock(output_mutex_);
  
-      origin_mutex_.lock();
+      origin_mutex_.lock(); 
       occupancy_grid_.UpdateOrigin(origin_);
       // distance_grid_.UpdateOrigin(origin_);
       // cost_grid_.UpdateOrigin(origin_);
@@ -299,7 +305,7 @@ namespace global_mapper
       occupancy_grid_.ResetDiffs();
       UpdateOccupancyGrid();
       temporal_grid_.UpdateOrigin(origin_);
-      UpdateTemporalGrid(timestamp_); // TODO: get timestamp from ROS node
+      UpdateTemporalGrid(timestamp_); 
       // UpdateDistanceGrid();
       // if ((spincount++ % 15) == 0)
       //{
@@ -311,9 +317,7 @@ namespace global_mapper
 
   void GlobalMapper::Run()
   {
-    // fprintf(stderr, "GlobalMapper::Run\n");
     thread_ = std::thread(&GlobalMapper::Spin, this);
-    // this->Spin();
   }
 
 } // namespace global_mapper

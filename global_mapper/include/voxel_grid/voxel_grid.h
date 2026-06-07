@@ -326,7 +326,6 @@ bool VoxelGrid<T>::IsInMap(const int ixyz[3]) const
 {
   for (int i = 0; i < 3; i++)
   {
-    // printf("ixyz[%i] = %i\n", i, ixyz[i]);
     if (ixyz[i] < 0 || ixyz[i] >= grid_dimensions_[i])
     {
       return false;
@@ -521,6 +520,7 @@ std::vector<int> VoxelGrid<T>::UpdateOrigin(const double new_grid_center[3])
   PreShiftOrigin(slice_inds);
   ShiftOrigin(new_lower_left_voxels);
   PostShiftOrigin(slice_inds);
+  
   return slice_inds;
 }
 

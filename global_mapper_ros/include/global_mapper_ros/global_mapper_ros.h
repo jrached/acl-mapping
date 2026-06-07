@@ -37,7 +37,6 @@
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
-#include <dynus_interfaces/msg/state.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
 // ROS 2 utilities
@@ -60,6 +59,7 @@ public:
   GlobalMapperRos();
   void Run();
   double start_time_; 
+  std_msgs::msg::Header_<std::allocator<void> >::_stamp_type pc_stamp_;
 
 private:
   void GetParams();
@@ -81,7 +81,7 @@ private:
 
   // callbacks
   void PointCloudCallback(const sensor_msgs::msg::PointCloud2::ConstSharedPtr & cloud_msg);
-  void PoseCallback(const dynus_interfaces::msg::State::SharedPtr pose_ptr);
+  void PoseCallback(const geometry_msgs::msg::PoseStamped::SharedPtr pose_ptr);
   void GoalCallback(const geometry_msgs::msg::PoseStamped::SharedPtr goal_ptr);
   void OdomCallback(const nav_msgs::msg::Odometry::SharedPtr odom_ptr);
 
@@ -95,10 +95,8 @@ private:
   };
 
   // name of the drone
-  std::string name_drone;
-  std::string lidar_frame_;
-  std::string drone_frame_id_;
-
+  std::string name_drone_;
+  
   // publishers
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr occ_grid_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr unknown_grid_pub_;
@@ -116,20 +114,12 @@ private:
 
   // subscribers
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_sub_;
-  rclcpp::Subscription<dynus_interfaces::msg::State>::SharedPtr pose_sub_;
+  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr pose_sub_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;
 
   // params
   global_mapper::Params params_;
-  bool publish_occupancy_grid_;
-  bool publish_unknown_grid_;
-  bool publish_distance_grid_;
-  bool publish_cost_grid_;
-  bool publish_path_;
-  bool publish_dynamic_grid_;
-  double clear_unknown_distance_;
-  double target_altitude_;
 
   // i/o flags
   bool got_goal_;

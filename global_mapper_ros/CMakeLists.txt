@@ -31,6 +31,7 @@ find_package(PCL 1.12 COMPONENTS common REQUIRED)
 find_package(tf2_ros                  REQUIRED)
 find_package(tf2_sensor_msgs          REQUIRED)
 find_package(tf2_eigen                REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 find_package(sensor_msgs              REQUIRED)
 find_package(nav_msgs                 REQUIRED)
 find_package(geometry_msgs            REQUIRED)
@@ -59,12 +60,24 @@ add_executable(global_mapper_node
   src/global_mapper_ros.cc
 )
 
+add_executable(obstacle_tracker_node 
+  src/obstacle_tracker_node.cpp 
+  src/utils.cpp
+)
+
 # ————————————————————————————————————————————————————————
 # Include paths for your headers + external libs
 # ————————————————————————————————————————————————————————
 target_include_directories(global_mapper_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../fla_utils/include>
+  $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
+  ${PCL_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIRS}
+)
+
+target_include_directories(obstacle_tracker_node PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
   ${PCL_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIRS}
@@ -88,7 +101,6 @@ ament_target_dependencies(global_mapper_node
   image_transport
   cv_bridge
   fla_interfaces
-  dynus_interfaces
   builtin_interfaces
   Eigen3
 )
@@ -98,6 +110,25 @@ ament_target_dependencies(global_mapper_node
 target_link_libraries(global_mapper_node
   ${PCL_LIBRARIES}
   ${global_mapper_LIBRARIES}   # this expands to the four .so’s
+)
+
+ament_target_dependencies(obstacle_tracker_node 
+  rclcpp 
+  rclcpp_components
+  visualization_msgs 
+  Eigen3 
+  std_msgs 
+  sensor_msgs 
+  tf2 
+  tf2_ros 
+  pcl_conversions 
+  tf2_geometry_msgs 
+  tf2_eigen
+  dynus_interfaces
+)
+
+target_link_libraries(obstacle_tracker_node 
+  ${PCL_LIBRARIES}
 )
 
 # ————————————————————————————————————————————————————————
@@ -111,6 +142,12 @@ install(
 install(
   TARGETS global_mapper_node
   RUNTIME DESTINATION lib/${PROJECT_NAME}
+)
+
+# install for executables
+install(TARGETS
+  obstacle_tracker_node
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 # install for launch and config files

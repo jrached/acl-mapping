@@ -1,0 +1,24 @@
+# This is the configuration file for the obstacle tracker package
+obstacle_tracker_node:
+
+    ros__parameters:
+        # Obstacle tracking/prediction parameters
+        use_adaptive_kf: false                       # [-] Use adaptive KF
+        adaptive_kf_alpha: 0.90                     # [-] Alpha for the adaptive KF (if you set it to 1.0, it becomes a standard KF)
+        adaptive_kf_dt: 0.1                         # [s] Time step for the adaptive KF
+        cluster_tolerance: 1.0                      # [m] Tolerance for the clustering
+        min_cluster_size: 10 #15 #8               # [-] Minimum cluster pointcloud size
+        max_cluster_size: 1000                      # [-] Maximum cluster pointcloud size
+        prediction_horizon: 0.5                     # [s] Prediction horizon
+        prediction_dt: 0.1                          # [s] Time step for the prediction
+        time_to_delete_old_obstacles: 1.0 #5.0           # [s] Time to delete old obstacles
+        cluster_bbox_cutoff_size: 2.5               # [m] Size of the bounding box for the clustering
+        use_life_time_for_box_visualization: true   # [-] Use life time for the box visualization - if false, we keep the box until the end of the simulation
+        box_visualization_duration: 0.1             # [s] Duration to visualize the bounding box
+        velocity_threshold: 0.2                     # [m/s] Velocity threshold to characterize as dynamic obstacles
+        acceleration_threshold: 0.1                 # [m/s2] Acceleration threshold to characterize as dynamic obstacles
+        bbox_density: 10.0 #15.0 #8
+        use_gridnet: true
+        alpha: 0.05
+        gridnet_tolerance: 0.3
+        time_to_hide_obstacle: 0.3

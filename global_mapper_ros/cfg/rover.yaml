@@ -1,0 +1,74 @@
+flight_goggles:
+  ros__parameters:
+
+    global_frame: RR03/odom
+    lidar_frame: RR03/odom
+    drone_frame: RR03/base_link
+    origin: [1.53, -3.17, 0.82]  # [m]
+    world_dimensions: [16.0, 16.0, 10.0]  # [m]  16   16   4
+    resolution: 0.3 # 0.3  # [m]  
+    radius_drone: 0.41 # [m] THIS SHOULD BE HIGHER THAN THE RESOLUTION!!
+    Ra: 11.3 # [m] radius of the first sphere (Sa) in the planner. The unknown pcloud published will only contain points inside this sphere
+    z_ground: 0.1 #[m] points below z_ground are not published in the known grid
+    skip: 0  #[pixels] Numbers of pixels to skip in the depth map. Should be >=0
+    depth_max: 15.0 #[m] In the depth image, points farther than depth_max, are treated as inf (i.e. along its ray (and up to that point) only unknown voxels are cleared. If doing simulation, this should be 5 (actually it should be the clipping distance of the depth image, but somehow it's always clipped at 5 meters)
+    r1: 0.41 #[m] Points in the sphere centerd in the drone with r>r1 and r<r2 are published as unkown space
+    r2: 11.3 #[m] See above
+    z_min_unknown: 0.1 #[m] points below z_min_unkown are not published in the unkown grid
+    z_max_unknown: 10.0 #[m] points above z_max_unkown are not published in the unkown grid
+
+    occupancy_grid:
+      publish_occupancy_grid: true
+      publish_unknown_grid: false
+      init_value: 0.0
+      hit_inc: 0.6 #Was 0.4
+      miss_inc: -0.3 #-0.1
+      occupancy_threshold: 0.6  # [0.0, 1.0]
+      clear_unknown_distance: 10.0 #5.0  # [m]  #Nan ¿and inf? --> Clear the unkown voxels up to this distance
+
+    distance_grid:
+      publish_distance_grid: false
+      truncation_distance: 6  # [voxels]
+
+    cost_grid:
+      publish_cost_grid: false
+      publish_path: false
+      inflation_distance: 4  # inflate obstacles by this many squared voxels
+      altitude_weight: 20
+      inflation_weight: 0
+      unknown_weight: 20
+      obstacle_weight: 10000
+      target_altitude: 2.0  # target altitude [m]
+
+    temporal_grid:
+      publish_dynamic_grid: true               
+      occupied_thresh: 3.0                      # [s] How long a voxel needs to be occupied for it to be considered static 
+      unoccupied_thresh: 1.0 #0.5               # [s] How long a voxel needs to be unoccupied for it to be considered free space 
+      neighbor_radius: 2                        # [-] For n = (1 + 2 * r) ^ 3 number of neighbors to explore, neighbor radius is r
+      static_neighbor_thresh: 6                 # [-] Number of static neighbors for the current voxel to be considered static by association
+
+    # Obstacle tracking/prediction parameters
+    use_hardware: true 
+    use_adaptive_kf: false                      # [-] Use adaptive KF
+    adaptive_kf_alpha: 0.90                     # [-] Alpha for the adaptive KF (if you set it to 1.0, it becomes a standard KF)
+    adaptive_kf_dt: 0.1                         # [s] Time step for the adaptive KF
+    association_tolerance: 1.0                  # [m] Maximum distance for a KF estimate to be associated with a measurement from the 3D tracker
+    cluster_tolerance: 0.3                      # [m] Maximum distance from cluster for a point to be considered a member of that cluster 
+    min_cluster_size: 10 #15 #8                 # [-] Minimum cluster pointcloud size
+    max_cluster_size: 1000                      # [-] Maximum cluster pointcloud size
+    prediction_horizon: 1.0 #0.5                # [s] Prediction horizon
+    prediction_dt: 0.1                          # [s] Time step for the prediction
+    time_to_delete_old_obstacles: 1.0 #5.0      # [s] Time to delete old obstacles
+    cluster_bbox_cutoff_size: 5.0               # [m] Length of the diagonal of the bounding box for the clustering
+    cluster_bbox_cutoff_len: 0.15               # [m] Size of the shortest bounding box side length 
+    use_life_time_for_box_visualization: true   # [-] Use life time for the box visualization - if false, we keep the box until the end of the simulation
+    box_visualization_duration: 0.1             # [s] Duration to visualize the bounding box
+    velocity_threshold: 0.2                     # [m/s] Velocity threshold to characterize as dynamic obstacles
+    acceleration_threshold: 0.5                 # [m/s2] Acceleration threshold to characterize as dynamic obstacles
+    bbox_density: 10.0 #15.0 #8                 # [1/m] Minimum bounding box point density for detection to not be treated as noise. Computed as num_points / diag_len
+    use_gridnet: true
+    alpha: 0.05 
+    gridnet_tolerance: 0.5 # 0.3                # [m] Gridnet association tolerance. Higher tolerance --> higher recall, lower precision
+    time_to_hide_obstacle: 0.3                  # [s] Number of seconds after which to hide a KF estimate without yet deleting it
+    diag_R: 0.01                                # [-] Diagonal values of KF measurement noise covariance matrix. 0.01 works well for hardware 
+    diag_Q: 0.01                                # [-] Diagonal values of KF process noise covariance matrix. 0.01 works well for hardware 
