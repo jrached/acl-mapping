@@ -205,11 +205,14 @@ namespace global_mapper
       }
     }
 
-    now = std::chrono::high_resolution_clock::now();
-    double curr_time = std::chrono::duration<double>(now.time_since_epoch()).count();
+    if (params_.verbose)
+    {
+      now = std::chrono::high_resolution_clock::now();
+      double curr_time = std::chrono::duration<double>(now.time_since_epoch()).count();
 
-    double elapsed_time = (curr_time - prev_time) * 1e3;   
-    std::cout << "\nMap insertion duration: " << elapsed_time << " ms" << std::endl;
+      double elapsed_time = (curr_time - prev_time) * 1e3;   
+      std::cout << "\nMap insertion duration: " << elapsed_time << " ms" << std::endl;
+    }
   }
 
   void GlobalMapper::UpdateCostGrid()

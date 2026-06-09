@@ -273,6 +273,7 @@ void ObstacleTrackerNode::declareAndsetParameters()
     this->declare_parameter("diag_Q", 0.01); 
     this->declare_parameter("association_tolerance", 1.0); 
     this->declare_parameter("global_frame", "map"); 
+    this->declare_parameter("verbose", false); 
 
     // Set parameters
     visual_level_ = this->get_parameter("visual_level").as_int();
@@ -304,6 +305,7 @@ void ObstacleTrackerNode::declareAndsetParameters()
     diag_Q_ = this->get_parameter("diag_Q").as_double(); 
     association_tolerance_ = this->get_parameter("association_tolerance").as_double();
     frame_id_ = this->get_parameter("global_frame").as_string();
+    verbose_ = this->get_parameter("verbose").as_bool(); 
 
 
     // Print the parameters
@@ -323,6 +325,7 @@ void ObstacleTrackerNode::declareAndsetParameters()
     RCLCPP_INFO(this->get_logger(), "velocity_threshold: %f", velocity_threshold_);
     RCLCPP_INFO(this->get_logger(), "acceleration_threshold: %f", acceleration_threshold_);
     RCLCPP_INFO(this->get_logger(), "use_hardware: %d", use_hardware_);
+    RCLCPP_INFO(this->get_logger(), "verbose: %d", verbose_);
 }
 
 // GridNet callback function 
@@ -493,9 +496,12 @@ void ObstacleTrackerNode::runTracker()
 
             if (closest_ekf_idx >= 0 && ekf_states_[closest_ekf_idx].assigned == false && (this->now().seconds() - ekf_states_[closest_ekf_idx].last_mes_time) < 2.0 * time_to_delete_old_obstacles_)
             {
-                gn_counter_++; 
-                std::cout << "Using Gridnet " << gn_counter_ << std::endl; 
-
+                if (verbose_)
+                {
+                    gn_counter_++; 
+                    std::cout << "Using Gridnet " << gn_counter_ << std::endl; 
+                }
+                
                 // Initialize a new cluster
                 Cluster cluster;
 

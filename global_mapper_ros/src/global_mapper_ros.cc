@@ -39,6 +39,8 @@ namespace global_mapper_ros
     this->declare_parameter<double>("z_min_unknown", 0.1);
     this->declare_parameter<double>("z_max_unknown", 5.0);
     this->declare_parameter<double>("cloud_ds_size", 0.1);
+    this->declare_parameter<bool>("verbose", false); 
+    this->declare_parameter<bool>("downsample", true); 
 
     // namespaced ones:
     this->declare_parameter<double>("occupancy_grid.init_value", 0.0);
@@ -83,6 +85,8 @@ namespace global_mapper_ros
     fla_utils::SafeGetParam(*this, "z_min_unknown", params_.z_min_unknown);
     fla_utils::SafeGetParam(*this, "z_max_unknown", params_.z_max_unknown);
     fla_utils::SafeGetParam(*this, "cloud_ds_size", params_.cloud_ds_size);
+    fla_utils::SafeGetParam(*this, "verbose", params_.verbose); 
+    fla_utils::SafeGetParam(*this, "downsample", params_.downsample); 
 
     // occupancy_grid
     fla_utils::SafeGetParam(*this, "occupancy_grid.init_value", params_.init_value);
@@ -621,8 +625,11 @@ namespace global_mapper_ros
         static_grid_pub_->publish(static_pointcloud_msg);
     }
 
-    double duration = 1000 * (this->now().seconds() - prev_time);
-    std::cout << "\nMap population duration: " << duration << " ms" << std::endl; 
+    if (params_.verbose) 
+    {
+      double duration = 1000 * (this->now().seconds() - prev_time);
+      std::cout << "\nMap population duration: " << duration << " ms" << std::endl; 
+    }
   }
 
   // Callback for Odometry (jackal)
@@ -716,29 +723,35 @@ namespace global_mapper_ros
 
     pc_stamp_ = cloud_msg->header.stamp; 
 
-    // 1) Receipt log
-    RCLCPP_INFO(this->get_logger(), "\nMapper: point cloud received"); 
+    // 1) Convert ROS2 PointCloud2 -> PCL PointCloud<PointXYZI> 
+    auto tmp = std::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
+    pcl::fromROSMsg(*cloud_msg, *tmp);
+
     if (!got_depth_image_)
     {
       got_depth_image_ = true;
     }
 
-    // 2) Convert ROS2 PointCloud2 -> PCL PointCloud<PointXYZI> and downsample 
-    auto tmp = std::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
-    pcl::fromROSMsg(*cloud_msg, *tmp);
+    if (params_.verbose)
+      std::cout << "Mapper: received cloud with " << tmp->size() << " points" << std::endl; 
 
-    // Downsample using VoxelGrid 
-    pcl::VoxelGrid<pcl::PointXYZI> voxel_filter;
-    voxel_filter.setInputCloud(tmp);
-    voxel_filter.setLeafSize(params_.cloud_ds_size, params_.cloud_ds_size, params_.cloud_ds_size);
 
+    // 2) Downsample using VoxelGrid 
     pcl::PointCloud<pcl::PointXYZI> cloud_filtered;
-    voxel_filter.filter(cloud_filtered);
+    if (params_.downsample)
+    {
+      pcl::VoxelGrid<pcl::PointXYZI> voxel_filter;
+      voxel_filter.setInputCloud(tmp);
+      voxel_filter.setLeafSize(params_.cloud_ds_size, params_.cloud_ds_size, params_.cloud_ds_size);
+      voxel_filter.filter(cloud_filtered);
+    }
+    else 
+    {
+      cloud_filtered.points = tmp->points; 
+    }
 
     auto in = std::make_shared<pcl::PointCloud<pcl::PointXYZI>>();
     in->points.reserve(cloud_filtered.size());
-
-    std::cout << "Pointcloud size: " << cloud_filtered.size() << std::endl; 
 
     for (const auto &pt : cloud_filtered.points)
     {
@@ -830,8 +843,11 @@ namespace global_mapper_ros
     // 8) Copy cloud pointer 
     pcl::copyPointCloud(*world_cloud, *cloud_);
 
-    double duration = 1000 * (this->now().seconds() - prev_time);
-    std::cout << "\nPC callback (tfs) duration: " << duration << " ms" << std::endl; 
+    if (params_.verbose)
+    {
+      double duration = 1000 * (this->now().seconds() - prev_time);
+      std::cout << "\nPC callback (tfs) duration: " << duration << " ms" << std::endl; 
+    }
   }
 
   void GlobalMapperRos::Run()

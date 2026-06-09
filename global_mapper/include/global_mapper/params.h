@@ -24,6 +24,8 @@ struct Params
   double cloud_ds_size = 0.1;
   std::string odom_frame;
   std::string sensor_frame;
+  bool verbose; 
+  bool downsample; 
 
   // occupancy_grid
   double init_value = 0;
