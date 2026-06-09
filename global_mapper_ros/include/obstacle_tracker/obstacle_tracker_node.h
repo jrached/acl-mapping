@@ -147,6 +147,7 @@ private:
     bool diag_R_;
     bool diag_Q_;
     float association_tolerance_;
+    bool verbose_;
 
     // Timer 
     rclcpp::TimerBase::SharedPtr timer_;

@@ -1,6 +1,9 @@
 flight_goggles:
   ros__parameters:
 
+    # Logging parameters 
+    verbose: false 
+
     # Map parameters 
     global_frame: world_mocap 
     odom_frame: init_pose
@@ -17,7 +20,8 @@ flight_goggles:
     r2: 11.3                                         # [m] See above
     z_min_unknown: 0.1                               # [m] points below z_min_unkown are not published in the unkown grid
     z_max_unknown: 10.0                              # [m] points above z_max_unkown are not published in the unkown grid
-    cloud_ds_size: 0.1                               # [m] voxel size for point cloud's voxel grid downsample 
+    downsample: true                                 # [-] Whether to downsample the incoming point cloud 
+    cloud_ds_size: 0.1                               # [m] Voxel size for point cloud's voxel grid downsample 
 
     occupancy_grid:
       publish_occupancy_grid: true
