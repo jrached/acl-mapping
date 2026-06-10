@@ -1,15 +1,15 @@
-session_name: obstacle_tracker_tmux 
+session_name: storm_tmux 
 windows: 
   - windo_name: main 
     layout: tiled 
     shell_command_before: 
-      - source ~/code/tracker_ws/install/setup.bash  
+      - export VEH_NAME=PX05 
+      - source ~/code/storm/tracker_ws/install/setup.bash  
     panes: 
       - shell_command: 
-        - source ~/code/decomp_ws/install/setup.bash 
         - ros2 launch global_mapper_ros global_mapper_node.launch.py namespace:=$VEH_NAME depth_pointcloud_topic:=livox/lidar use_tracker:=true init_x:=0.022918 init_y:=0.004601 init_z:=0.127709 init_yaw:=-0.0062990 init_pitch:=0.026865 init_roll:=0.002606
       - shell_command: 
-        - rviz2 -d ~/code/tracker_ws/src/acl-mapping/global_mapper_ros/rviz/storm.rviz 
+        - rviz2 -d ~/code/storm/tracker_ws/src/acl-mapping/global_mapper_ros/rviz/storm.rviz 
       - shell_command: 
-        - cd ~/code/gridnet_docker
+        - cd ~/code/storm/gridnet_docker
         - ./run.sh
