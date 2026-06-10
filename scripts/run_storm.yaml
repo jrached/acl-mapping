@@ -4,6 +4,7 @@ windows:
     layout: tiled 
     shell_command_before: 
       - export VEH_NAME=PX05 
+      - export ROS_DOMAIN_ID=7
       - source ~/code/storm/tracker_ws/install/setup.bash  
     panes: 
       - shell_command: 
