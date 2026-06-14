@@ -77,7 +77,7 @@ flight_goggles:
     bbox_density: 10.0                               # [1/m] Minimum bounding box point density for detection to not be treated as noise. Computed as num_points / diag_len
     cluster_bbox_cutoff_size: 5.0                    # [m] Maximum length of the bounding box diagonal 
     flat_surface_thresh: 3.0                         # [-] Maximum ratio of two shortest bounding box side lengths (lower for aggressive filtering) 
-    thin_surface_thresh: 3.0                         # [-] Maximum ratio of two longest bounding box side lengths (lower for aggressive filtering)
+    thin_surface_thresh: 4.0                         # [-] Maximum ratio of two longest bounding box side lengths (lower for aggressive filtering)
     velocity_threshold: 0.2                          # [m/s] Velocity threshold to characterize as dynamic obstacles
     ekf_times_seen_thresh: 2                         # [-] Minimum number of recorded measurements for an ekf estimate before publishing it. Consistency check to remove artifacts.
     time_to_hide_obstacle: 0.3                       # [s] Number of seconds after which to hide a KF estimate without yet deleting it
