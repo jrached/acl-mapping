@@ -56,7 +56,7 @@ flight_goggles:
 
     # Obstacle tracker GridNet parameters
     use_gridnet: true                                # [-] Whether to use learning-based obstacle detector
-    gridnet_tolerance: 0.5 # 0.3                     # [m] Gridnet association tolerance. Higher tolerance --> higher recall, lower precision
+    gridnet_tolerance: 0.5                     # [m] Gridnet association tolerance. Higher tolerance --> higher recall, lower precision
 
     # Obstacle tracker EKF parameters
     use_hardware: true 
