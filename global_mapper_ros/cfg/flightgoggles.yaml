@@ -56,7 +56,7 @@ flight_goggles:
 
     # Obstacle tracker GridNet parameters
     use_gridnet: true                                # [-] Whether to use learning-based obstacle detector
-    gridnet_tolerance: 0.5 # 0.3                     # [m] Gridnet association tolerance. Higher tolerance --> higher recall, lower precision
+    gridnet_tolerance: 0.5                     # [m] Gridnet association tolerance. Higher tolerance --> higher recall, lower precision
 
     # Obstacle tracker EKF parameters
     use_hardware: true 
@@ -72,14 +72,14 @@ flight_goggles:
     diag_Q: 0.01                                     # [-] Diagonal values of KF process noise covariance matrix. 0.01 works well for hardware 
 
     # Obstacle tracker heuristic filter parameters 
-    min_cluster_size: 10                             # [-] Minimum cluster pointcloud size
+    min_cluster_size: 15                             # [-] Minimum cluster pointcloud size
     max_cluster_size: 1000                           # [-] Maximum cluster pointcloud size
-    bbox_density: 10.0                               # [1/m] Minimum bounding box point density for detection to not be treated as noise. Computed as num_points / diag_len
+    bbox_density: 15.0                               # [1/m] Minimum bounding box point density for detection to not be treated as noise. Computed as num_points / diag_len
     cluster_bbox_cutoff_size: 5.0                    # [m] Maximum length of the bounding box diagonal 
-    flat_surface_thresh: 3.0                         # [-] Maximum ratio of two shortest bounding box side lengths (lower for aggressive filtering) 
-    thin_surface_thresh: 3.0                         # [-] Maximum ratio of two longest bounding box side lengths (lower for aggressive filtering)
+    flat_surface_thresh: 2.75                        # [-] Maximum ratio of two shortest bounding box side lengths (lower for aggressive filtering) 
+    thin_surface_thresh: 3.75                        # [-] Maximum ratio of two longest bounding box side lengths (lower for aggressive filtering)
     velocity_threshold: 0.2                          # [m/s] Velocity threshold to characterize as dynamic obstacles
-    ekf_times_seen_thresh: 2                         # [-] Minimum number of recorded measurements for an ekf estimate before publishing it. Consistency check to remove artifacts.
+    ekf_times_seen_thresh: 3                         # [-] Minimum number of recorded measurements for an ekf estimate before publishing it. Consistency check to remove artifacts.
     time_to_hide_obstacle: 0.3                       # [s] Number of seconds after which to hide a KF estimate without yet deleting it
     time_to_delete_old_obstacles: 1.0                # [s] Time to delete old ekf estimates
 
